@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+	# display usage if no parameters given
+	echo ""
+	echo "Usage: configureFlag newFlag"
+	echo ""
+elif [[ $EUID -ne 0 ]]; then
+	#echo "Your running as a non root user, attempting to elevate you to root"
+	sudo configureFlag "$1"
+else
+	#echo "Running as root!"
+	echo "$1" > /tmp/flag
+	chmod 644 /tmp/flag
+	chown rvbadmin:rvbadmin /tmp/flag
+fi

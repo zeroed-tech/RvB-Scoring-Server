@@ -1,0 +1,51 @@
+/*Formats challenge squares*/
+
+
+.adminTables{
+	width: 100%;
+}
+
+.adminTables tr{
+	height: 50px;
+}
+
+.configInput{
+	text-align: right;
+	width: 200px;
+}
+
+
+
+#addChallenge, #challengeEditForm{
+	width: 130px;
+	text-align: center;
+	float: right;
+	transform: translateY(-200%);
+}
+
+
+.tacontainer *{
+	vertical-align: top;
+}
+
+.tacontainer textarea{
+	width: 500px;
+	height: 100px;
+}
+
+.tacontainer label{
+	width: 50px;
+}
+
+.stateImg{
+	float: right;
+}
+
+.pane ul{
+	margin-left: 10px;
+	list-style-type: none;
+}
+
+.pane ul li{
+	height: 30px;
+}
