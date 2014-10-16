@@ -1,5 +1,4 @@
 <?php
-//TODO add flag options
 class Challenge{
 	private $challengeId;
 	private $challengeName = '';
@@ -9,6 +8,7 @@ class Challenge{
     private $username;
     private $password;
     private $ip;
+    private $points;
 
     /**
      * @param $challengeId string Value read from the database
@@ -20,9 +20,10 @@ class Challenge{
      * @param null $password string Value read from the database
      * @param null $teamId string The id of the team this matches. Used in regex scripts to find IP addresses for containers
      */
-	public function __construct($challengeId, $challengeName, $challengeImage, $challengeAuthor, $isEnabled, $username=null,$password=null, $teamId=null){
+	public function __construct($challengeId, $challengeName, $challengeImage, $challengeAuthor, $isEnabled, $points, $username=null,$password=null, $teamId=null){
 		$this->challengeId = $challengeId;
 		$this->challengeName = $challengeName;
+        $this->points = $points;
 		if($challengeImage != null){
 			$this->challengeImage = $challengeImage;
 		}else{
@@ -61,17 +62,19 @@ class Challenge{
 	public function printChallenge(){
 		$html = "<div class='challenge ".($this->isEnabled == 1 ? "enabled":"disabled")."'>";
 		$html .= "<div id='challenge_".$this->challengeId."'>";
+        $html .= "<a href='javascript:void(0)' class='delete'>X</a>";
 		$html .= "<span id='a'>";
 		$html .= "<h4>".substr($this->challengeName, 0, 70)."</h4>";
 		$html .= "</span>";
 		$html .= "<img src='data:image/jpeg;base64,".$this->challengeImage."' ></img>";
 		$html .= "<ul>";
 		$html .= "<li class='author'>Author: ".$this->challengeAuthor."</li>";
+        $html .= "<li class='points'>Points: ".$this->points."</li>";
 		$html .= "</ul>";
-		$html .= "<a href='jscript:void(0)' class='modifyButton enable'>Enable</a>";
-		$html .= "<a href='jscript:void(0)' class='modifyButton disable'>Disable</a><br />";
-		$html .= "<a href='jscript:void(0)' class='modifyButton edit'>Edit</a>";
-		$html .= "<a href='jscript:void(0)' class='modifyButton delete'>Delete</a>";
+		$html .= "<a href='javascript:void(0)' class='modifyButton enable'>Enable</a>";
+		$html .= "<a href='javascript:void(0)' class='modifyButton disable'>Disable</a><br />";
+		$html .= "<a href='javascript:void(0)' class='modifyButton edit'>Edit</a>";
+        $html .= "<a href='javascript:void(0)' class='modifyButton consoleOutput'>Output</a>";
 		$html .= "</div>";
 		$html .= "</div>";
 		return $html;
@@ -82,7 +85,7 @@ class Challenge{
      *
      * @return string The complete HTML required to display this challenge to a user
      */
-    public function printUserChallenge(){
+    public function printTeamChallenge(){
         $html = "<div class='challenge ".($this->isEnabled == 1 ? "enabled":"disabled")."'>";
         $html .= "<div id='challenge_".$this->challengeId."'>";
         $html .= "<span>";
@@ -95,8 +98,8 @@ class Challenge{
         $html .= "<li class='password'>Password: ".$this->password."</li>";
         $html .= "<li class='ip'>IP: ".($this->ip != null && strcmp($this->ip, '-') != 0 ? $this->ip:"Powered Off" )."</li>";
         $html .= "</ul>";
-        $html .= "<a href='jscript:void(0)' class='modifyButton restart blue'>Restart</a>";
-        $html .= "<a href='jscript:void(0)' class='modifyButton revert red'>Revert</a><br />";
+        $html .= "<a href='javascript:void(0)' class='modifyButton restart blue'>Restart</a>";
+        $html .= "<a href='javascript:void(0)' class='modifyButton revert red'>Revert</a><br />";
         $html .= "</div>";
         $html .= "</div>";
         return $html;
@@ -150,8 +153,9 @@ class Achievement{
 
 class Config{
 	public $startDate;
-	public $endDate;
+	public $duration;
 	public $motd;
+    public $rules;
 	public $leftHeader;
 	public $centerHeader;
 	public $rightHeader;
@@ -160,10 +164,11 @@ class Config{
     const RUNNING = 1;
     const FINISHED = 2;
 
-	public function __construct($startDate, $endDate, $motd, $leftHeader, $centerHeader, $rightHeader){
+	public function __construct($startDate, $duration, $motd, $rules, $leftHeader, $centerHeader, $rightHeader){
 		$this->startDate = $startDate;
-		$this->endDate = $endDate;
+		$this->duration = $duration;
 		$this->motd = $motd;
+        $this->rules = $rules;
 		$this->leftHeader = $leftHeader;
 		$this->centerHeader = $centerHeader;
 		$this->rightHeader = $rightHeader;
@@ -176,7 +181,8 @@ class Config{
     public function getGameState(){
         $now = new DateTime();
         $gameStart = new DateTime($this->startDate);
-        $gameEnd = new DateTime($this->endDate);
+        $gameEnd = new DateTime($this->startDate);
+        $gameEnd->add(new DateInterval('PT'.$this->duration.'H'));
         if($now < $gameStart){
             return Config::NOTSTARTED;
         }
@@ -211,7 +217,7 @@ class BackgroundProcess{
     private $pid;
     private $outputFile;
     private $lastLine = 0;
-    private $filters = array("/^.*\(ECDSA\).*$/", "/^.*Pseudo-terminal.*$/");
+    private $filters = array("/^.*\(ECDSA\).*$/", "/^.*Pseudo-terminal.*$/", "/^.*Enter new UNIX password.*$/");
     private $callback;
     private $callbackArgs;
 
@@ -222,7 +228,11 @@ class BackgroundProcess{
     }
 
     public function run($outputFile = '/dev/null'){
+        error_log($outputFile);
         $this->outputFile = $outputFile;
+        if (!file_exists(dirname($outputFile))) {
+            mkdir(dirname($outputFile), 0777, true);
+        }
         $this->pid = shell_exec(sprintf('%s > %s 2>&1 & echo $!', $this->command, $outputFile ));
         $this->pid = trim($this->pid);
     }
@@ -254,14 +264,16 @@ class BackgroundProcess{
     }
 
     public function getNewOutput(){
-        if(file_exists("/tmp/rvbScriptOutput")) {
+        if(file_exists($this->outputFile) && strcmp($this->outputFile, "/dev/null") != 0) {
             $fContents = file($this->outputFile);
             $res = array();
             for($this->lastLine; $this->lastLine < count($fContents); $this->lastLine++){
                 $match = false;
                 foreach($this->filters as $filter){
                     if(preg_match($filter, $fContents[$this->lastLine]) == 1){
-                        $match = true;
+                        if(strlen(trim($fContents[$this->lastLine]) > 0)) {
+                            $match = true;
+                        }
                     }
                 }
                 if(!$match) {

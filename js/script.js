@@ -16,13 +16,13 @@ function postData(url, data, callback, fileProgressCallback){
 	xmlhttp.send(data);
 }
 
-//Make backpane opaque
+//Make back pane opaque
 function showPane(){
 	//document.getElementById("backPane").style.display = "block";
     $("#backPane").fadeIn("fast");
 }
 
-//Make backpane invisible
+//Make back pane invisible
 function hidePopup(){
 	//document.getElementById("backPane").style.display = "none";
 	//document.getElementById("backPane").innerHTML = "";
@@ -120,22 +120,28 @@ function logout(){
 
 function rules(){
 	document.getElementById("backPane").innerHTML = ' \
-		<div class="pane" id="loginPane" onclick="event.stopPropagation();"> \
-			<ul> \
-				<li>Rule 1</li> \
-				<li>Rule 2</li> \
-				<li>Rule 3</li> \
-				<li>Rule 4</li> \
-			</ul> \
-		</div>';
+	<div class="pane" onclick="event.stopPropagation();"> \
+        <ul id="rulesList"></ul>\
+    </div>';
+    var data = {functionCall: 'getRules'};
+
+    postData("management.php","data="+JSON.stringify(data), function(){
+        if (xmlhttp.readyState==4 && xmlhttp.status==200){
+            var rules = JSON.parse(xmlhttp.responseText);
+
+            for(var rule in rules){
+                console.log(rule)
+                $("#rulesList").append("<li>"+rules[rule].rule+"</li><li></li>")
+            }
+        }
+    });
 		showPane();
 }
 
-//Retreive current scoreboad from the server then display
-//TODO Add ajax calls and build table
+//Retrieve current scoreboard from the server then display
 function scoreboard(){
 	document.getElementById("backPane").innerHTML = ' \
-	<div class="pane" id="loginPane" onclick="event.stopPropagation();"> \
+	<div class="pane" onclick="event.stopPropagation();"> \
 	<table id="scoreTable">\
 		<tr><th>Position</th><th>Team Name</th><th>Score</th></th>\
 	</table>\
@@ -177,7 +183,8 @@ function submitFlag(){
 						success: postSubmit,
 						data: {data: JSON.stringify(data)},
 						resetForm: false};
-		    $(this).ajaxSubmit(options);            
+		    $(this).ajaxSubmit(options);
+            hidePopup();
 		});
 
 		showPane();
@@ -226,9 +233,17 @@ function showMessage(message, success, reloadOnSuccess){
 Run on startup. Used to configure listeners
  */
 $(document).ready(function() {
+
+    var hash = window.location.hash.replace('#','');
+    if(hash != ""){
+        $("#"+hash).children(".sectionContent").slideToggle(0);
+    }
+
     $(".sectionHeader").click(function (event) {
+        window.location.hash = $(this).parent().attr("id");
         if ($(this).parent().children(".sectionContent").is(":visible")) {
             $(this).parent().children(".sectionContent").slideToggle('slow');
+            window.location.hash="";
             return;
         }
         $(".sectionHeader").each(function () {
@@ -332,7 +347,7 @@ $(document).ready(function() {
             eventSource.close();
             eventSource = null;
         };
-    }, 1000);
+    }, 5000);
 
 
 

@@ -7,11 +7,7 @@
  * @param $containerName string New container name
  */
 function createContainerFromTemplate($template, $containerName){
-    $res = array();
     exec("sudo lxc-clone -s ".$template." ".$containerName, $res);
-    foreach ($res as $value) {
-        error_log($value);
-    }
 }
 
 /**
@@ -20,7 +16,6 @@ function createContainerFromTemplate($template, $containerName){
  * @param $containerName string The container to start
  */
 function startContainer($containerName){
-    $res = array();
     exec("sudo lxc-start -d -n ".$containerName);
     sleep(10);
 }
@@ -95,8 +90,10 @@ function createContainerInstanceFromTemplate($teamId, $parentChallenge){
     //Add challenge instance to the database
     dbInsert("challenge_instance", array("parentId" => $parentChallenge['id'], "teamId" => $teamId, "flagId" => $flagRecord['id'], "username" => explode(":",$usernamePassword)[0], "password" => explode(":",$usernamePassword)[1]));
 
-    //Shutdown the container (don't need it until the game starts)
-    stopContainer($newContainerName);
+    if(getConfig()->getGameState() != Config::RUNNING) {
+        //Shutdown the container (don't need it until the game starts)
+        stopContainer($newContainerName);
+    }
 }
 
 function revertContainer($containerId){
@@ -125,36 +122,34 @@ function getRandomWord(){
 /**
  * Generates a random flag by selecting 4 random dictionary words, sets the flag in the specified container and returns the generated flag.
  *
- * @param $containerName string The name of the container to set the flag in
  * @return string The flag that was set in the container
  */
-function setFlagForContainer($containerName){
+function setFlagForContainer(){
     //Read 4 random words from the dictionary file
     $flag = "FLAG:{".getRandomWord().getRandomWord().getRandomWord().getRandomWord()."}";
-    error_log($flag);
-    $res = array();
-    exec("sudo ssh rvbadmin@".$containerName." -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /home/rvbadmin/.ssh/id_rsa -t configureFlag ".$flag, $res);
-    foreach ($res as $value) {
-        error_log($value);
-    }
+    //error_log($flag);
+    //$res = array();
+    //exec("sudo ssh rvbadmin@".$containerName." -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /home/rvbadmin/.ssh/id_rsa -t configureFlag ".$flag, $res);
+    //foreach ($res as $value) {
+    //  error_log($value);
+    //}
     return $flag;
 }
 
 /**
  * Creates and sets a username and password in the specified container.
  *
- * @param $containerName string The container to create a username and password for
  * @param $teamId string The team id that should be used to create this container's credentials
  * @return string The username and password set on the specified container in the format username:password
  */
-function setUsernameAndPassword($containerName, $teamId){
+function setUsernameAndPassword($teamId){
     $username = "Team".$teamId;
-    $password = str_shuffle(getRandomWord().getRandomWord());//Get 2 random words then shuffle the letters
-    $res = array();
-    exec("sudo ssh rvbadmin@".$containerName." -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /home/rvbadmin/.ssh/id_rsa -t configureUsers ".$username." ".$password, $res);
-    foreach ($res as $value) {
-        error_log($value);
-    }
+    $password = substr(str_shuffle(getRandomWord().getRandomWord()),0,20);//Get 2 random words then shuffle the letters
+    //$res = array();
+    //exec("sudo ssh rvbadmin@".$containerName." -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /home/rvbadmin/.ssh/id_rsa -t configureUsers ".$username." ".$password, $res);
+    //foreach ($res as $value) {
+    //    error_log($value);
+    //}
     return $username.":".$password;
 }
 
@@ -171,22 +166,39 @@ function enableChallenge($challengeId){
     $challenge = dbSelect("challenge_templates", array(), array("id" => $challengeId), false)[0];
 
     //Get a list of teams
-    $users = getUserList();
-    foreach ($users as $user) {
+    $teams = getTeamList();
+    foreach ($teams as $team) {
         //Make sure the user is enabled and is either a blue or purple team
-        if ($user['enabled'] == 1 && ($user['type'] == 2 || $user['type'] == 3)) {
+        if ($team['enabled'] == 1 && ($team['type'] == 2 || $team['type'] == 3)) {
             //Make sure this isn't an admin and continue if it is (admins don't need a challenge instance)
-            if($user['isAdmin']){
+            if($team['isAdmin']){
                 continue;
             }
 
             //Check to see if a challenge instance has already been created for this user
-            $chalInstance = dbSelect("challenge_instance",array(),array("teamId"=>$user["id"], "parentId"=>$challengeId),false);
+            $chalInstance = dbSelect("challenge_instance",array(),array("teamId"=>$team["id"], "parentId"=>$challengeId),false);
             if(sizeof($chalInstance) == 0) {
-                $containerName = preg_replace("/[^A-Za-z0-9]/", '', $challenge['name']);
-                createContainerInstanceFromTemplate($user['id'],$challenge);
+                //Team doesn't have a challenge instance for this challenge so we need to make one
+                //Strip out the special characters from the challenge name and prepend the teams id the the container name to create a new container name
+                $baseContainer = preg_replace("/[^A-Za-z0-9]/", '', $challenge['name']);
+                $newContainerName = 'Team' . $team['id'] . '-' . $baseContainer;
+                $flag = setFlagForContainer();
+                $usernamePassword = setUsernameAndPassword($team['id']);
+                $username = explode(':',$usernamePassword)[0];
+                $password = explode(':',$usernamePassword)[1];
+                $shutdown = (getConfig()->getGameState() == Config::RUNNING ? "true":"false");
+
+                $command = "/usr/bin/rvbEnableContainer $baseContainer $newContainerName $flag $username $password $shutdown";
+
+                $callbackArgs = array($flag, $usernamePassword, $team['id'], $challenge['id']);
+
+                $bp = new BackgroundProcess($command, "enableContainer", $callbackArgs);
+                $bp->run("/tmp/$newContainerName/rvbEnableContainerOutput");
+
+                $_SESSION['BGProcess'] = serialize($bp);
+
             }else{
-                error_log("Not creating challenge instance of: ".$challenge['name']." for team: ".$user['teamname']." as they already have one.");
+                error_log("Not creating challenge instance of: ".$challenge['name']." for team: ".$team['teamname']." as they already have one.");
             }
         }
     }

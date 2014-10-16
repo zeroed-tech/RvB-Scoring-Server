@@ -1,6 +1,4 @@
 
-/* Header Styles */
-/* TODO Replace shadows with php so that header values can be read from a database or xml file*/
 #header{
 	padding-top: 20px;
 	padding-bottom: 20px;
@@ -27,9 +25,26 @@
 #navbar a{
 	padding-left: 10px;
 	padding-right: 10px;
+    font-family:PressStart;
+    font-size:0.8em;
+}
+
+#navbar a:hover{
+    -webkit-animation: neon 1.5s ease-in-out infinite alternate;
+    -moz-animation: neon 1.5s ease-in-out infinite alternate;
+    animation: neon 1.5s ease-in-out infinite alternate;
+}
+
+#rulesList{
+    font-family:PressStart;
+
 }
 
 /* Scoreboard Styles */
+/*
+Neon effect from http://codepen.io/NobodyRocks/pen/qzfoc?editors=110
+Font from http://www.zone38.net/font/
+*/
 #scoreTable th{
     font-weight: bold;
 }
@@ -38,16 +53,52 @@
 	position: relative;
 	margin: auto;
     width: 100%;
-    color: #999999;
+    color: #cbcbcb;
+    border-collapse: collapse;
+}
+
+@font-face {
+    font-family: 'PressStart';
+    font-style: normal;
+    font-weight: 300;
+    src: local('Press Start 2P'), local('PressStart2P-Regular'), url(../images/PressStart2P.woff) format('woff');
 
 }
+
+#scoreTable tr{
+    color:#228DFF;
+    font-family:PressStart;
+    font-size:1.0em;
+}
+
+.myTeam{
+    -webkit-animation: neon 1.5s ease-in-out infinite alternate;
+    -moz-animation: neon 1.5s ease-in-out infinite alternate;
+    animation: neon 1.5s ease-in-out infinite alternate;
+}
+
+@-webkit-keyframes neon {
+    from {text-shadow: 0 0 10px #fff, 0 0 20px  #fff, 0 0 30px  #fff, 0 0 40px  #228DFF, 0 0 70px  #228DFF, 0 0 80px  #228DFF, 0 0 100px #228DFF, 0 0 150px #228DFF;}
+    to {text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #228DFF, 0 0 35px #228DFF, 0 0 40px #228DFF, 0 0 50px #228DFF, 0 0 75px #228DFF;}
+}
+
+@-moz-keyframes neon {
+    from {text-shadow: 0 0 10px #fff, 0 0 20px  #fff, 0 0 30px  #fff, 0 0 40px  #228DFF, 0 0 70px  #228DFF, 0 0 80px  #228DFF, 0 0 100px #228DFF, 0 0 150px #228DFF;}
+    to {text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #228DFF, 0 0 35px #228DFF, 0 0 40px #228DFF, 0 0 50px #228DFF, 0 0 75px #228DFF;}
+}
+
+@keyframes neon {
+    from {text-shadow: 0 0 10px #fff, 0 0 20px  #fff, 0 0 30px  #fff, 0 0 40px  #228DFF, 0 0 70px  #228DFF, 0 0 80px  #228DFF, 0 0 100px #228DFF, 0 0 150px #228DFF;}
+    to {text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #228DFF, 0 0 35px #228DFF, 0 0 40px #228DFF, 0 0 50px #228DFF, 0 0 75px #228DFF;}
+}
+
 
 /* Back Pane / Popup Styles */
 #backPane {
 	overflow: auto;
 	position: fixed;
-	left: 0px;
-	top: 0px;
+	left: 0;
+	top: 0;
 	width: 100%;
 	min-height: 100%;
 	z-index: 1000;
@@ -104,7 +155,7 @@
     margin-top: 10px;
     font-weight: bold;
 }
-.pane input[type="text"], .pane input[type="password"], .pane textarea, .pane select, .pane input[type="file"] {
+input[type="text"], input[type="password"], textarea, select, input[type="file"] {
     border: none;
     color: #525252;
     height: 25px;
@@ -121,7 +172,7 @@
     -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
     background: #DFDFDF;
 }
-.pane select {
+select {
     text-indent: 0.01px;
     text-overflow: '';
     width: 70%;
@@ -129,12 +180,12 @@
     color: #525252;
     line-height: 25px;
 }
-.pane textarea{
+textarea{
     height:100px;
     padding: 5px 0px 0px 5px;
     width: 70%;
 }
-.pane input[type="submit"] {
+input[type="submit"] {
     background: #FFCC02;
     border: none;
     padding: 10px 25px 10px 25px;
@@ -151,7 +202,7 @@
     overflow: hidden
 }
 
-.pane input[type="submit"]:hover {
+input[type="submit"]:hover {
     color: #333;
     background-color: #EBEBEB;
 
@@ -163,14 +214,19 @@ body {
     background: #333;
     width: 1024px;
     margin: auto;
+    /*font-family:PressStart;*/
 }
 
 p{
 	color: #ccc;
+    font-family:PressStart;
+    font-size: 13px;
 }
 
 a{
     border: none;
+    /*font-family:PressStart;
+    font-size: 14px;*/
 }
 
 a, a:link, a:visited, a:active{
@@ -312,6 +368,7 @@ a:hover{
 .modifyButton a, a:link, a:visited, a:active{
     color: #FFFFFF;
     text-decoration: none;
+
 }
 
 .modifyButton.enable, #addChallenge, .green{
@@ -371,13 +428,41 @@ a:hover{
     background-image: linear-gradient(to bottom, #4f4ff7, #2e08c7);
 }
 
-.modifyButton.delete{
-    background: #000000;
-    background-image: -webkit-linear-gradient(top, #000000, #000000);
-    background-image: -moz-linear-gradient(top, #000000, #000000);
-    background-image: -ms-linear-gradient(top, #000000, #000000);
-    background-image: -o-linear-gradient(top, #000000, #000000);
-    background-image: linear-gradient(to bottom, #000000, #000000);
+.delete{
+    position: absolute;
+    top: 0;
+    left: 225px;
+    width: 25px;
+    font-family: Arial;
+    font-size: 20px;
+    display: none;
+}
+
+.delete:hover{
+    background: #960004;
+    background-image: -webkit-linear-gradient(top, #960004, #960303);
+    background-image: -moz-linear-gradient(top, #960004, #960303);
+    background-image: -ms-linear-gradient(top, #960004, #960303);
+    background-image: -o-linear-gradient(top, #960004, #960303);
+    background-image: linear-gradient(to bottom, #960004, #960303);
+}
+
+.modifyButton.consoleOutput:hover, .yellow:hover{
+    background: #96430f;
+    background-image: -webkit-linear-gradient(top, #96430f, #96430f);
+    background-image: -moz-linear-gradient(top, #96430f, #96430f);
+    background-image: -ms-linear-gradient(top, #96430f, #96430f);
+    background-image: -o-linear-gradient(top, #96430f, #96430f);
+    background-image: linear-gradient(to bottom, #96430f, #96430f);
+}
+
+.modifyButton.consoleOutput{
+    background: #cb560f;
+    background-image: -webkit-linear-gradient(top, #cb560f, #96430f);
+    background-image: -moz-linear-gradient(top, #cb560f, #96430f);
+    background-image: -ms-linear-gradient(top, #cb560f, #96430f);
+    background-image: -o-linear-gradient(top, #cb560f, #96430f);
+    background-image: linear-gradient(to bottom, #cb560f, #96430f);
 }
 
 /**Section Styles**/
@@ -422,11 +507,11 @@ a:hover{
     background-color: rgba(4,4,4,0.6);
 }
 
-.disabled .author, .username, .password, .ip{
+.disabled .author, .disabled  .username, .disabled  .password, .disabled  .ip, .disabled  .points{
     color: rgb(0,0,0);
 }
 
-.enabled .author, .username, .password, .ip{
+.enabled .author, .enabled .username, .enabled .password, .enabled .ip, .enabled .points{
     color: #CCC;
 }
 
@@ -468,7 +553,7 @@ a:hover{
 
 .section{
     border: 2px solid;
-    border-radius: 10px;
+    /*border-radius: 10px;*/
     background-color: white;
 }
 
@@ -527,4 +612,13 @@ a:hover{
 .achievementDetails h2{
     color: #999999;
     display: inline;
+}
+
+canvas{
+    margin: auto;
+    position: relative;
+    top: -webkit-calc(50% - 250px);
+    top: calc(50% - 250px);
+    left: -webkit-calc(50% - 300px);
+    left: calc(50% - 300px);
 }

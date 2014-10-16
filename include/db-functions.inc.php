@@ -9,7 +9,7 @@
      */
 	function dbInsert($table, $values){
 		global $con;
-		//Build an insert statement bassed on $table and $value. This statement can handle inserting any number of values into any table.
+		//Build an insert statement based on $table and $value. This statement can handle inserting any number of values into any table.
 		//$values should be an array with column names used as keys and values to insert as values.
 		try{
 			$sql = "INSERT INTO $table (".implode(', ', array_keys($values)).") VALUES (".implode(', ', array_fill(0, count($values), '?')).")";
@@ -20,6 +20,7 @@
 		}catch( Exception $e ){
 			error_log("Exception while inserting values into $table.".$e);
 		}
+        return null;
 	}
 
 	function quote($toQuote){
@@ -143,20 +144,20 @@
 
 	function getConfig(){
 		$config = dbSelect("config", array(), array(), false)[0];
-		return new Config($config['startTime'],$config['endTime'],$config['motd'],$config['leftHeader'],$config['centerHeader'],$config['rightHeader']);
+		return new Config($config['startTime'],$config['duration'],$config['motd'],$config['rules'], $config['leftHeader'],$config['centerHeader'],$config['rightHeader']);
 	}
 
-	function getUserList(){
+	function getTeamList(){
 		//Define an empty array. This will be filled with user info
 		$returnArray = array();
 		//Select all users from the teams table
-		$users = dbSelect("teams", array(), array(), false);
-		foreach ($users as $user){
+		$teams = dbSelect("teams", array(), array(), false);
+		foreach ($teams as $team){
 			//Check if the current user is an admin then create a new key value pair in the user array
-			$admincheck = dbSelect("admins",array(),array('id'=>$user['id']), false);
-			$user['isAdmin'] = (!empty($admincheck)) ? true:false;
+			$adminCheck = dbSelect("admins",array(),array('id'=>$team['id']), false);
+			$team['isAdmin'] = (!empty($adminCheck)) ? true:false;
 			//Add the user array to the array we are returning
-			$returnArray[] = $user;
+			$returnArray[] = $team;
 		}
 		return $returnArray;
 	}
@@ -166,7 +167,7 @@
 		$challenges = dbSelect("challenge_templates", array(), array(), false);
 		foreach ($challenges as $challenge){
 			//Build a new challenge object for each challenge
-			$returnArray[] = new Challenge($challenge['id'],$challenge['name'],base64_encode($challenge['image']),$challenge['author'],$challenge['enabled']);
+			$returnArray[] = new Challenge($challenge['id'],$challenge['name'],base64_encode($challenge['image']),$challenge['author'],$challenge['enabled'], $challenge['value']);
 		}
 		return $returnArray;
 	}
@@ -177,7 +178,7 @@
 
         foreach ($challenges as $challenge){
             //Build a new challenge object for each challenge
-            $returnArray[] = new Challenge($challenge['id'],$challenge['name'],base64_encode($challenge['image']),$challenge['author'],$challenge['enabled'],$challenge['username'],$challenge['password'], $teamId);
+            $returnArray[] = new Challenge($challenge['id'],$challenge['name'],base64_encode($challenge['image']),$challenge['author'],$challenge['enabled'], $challenge['value'],$challenge['username'],$challenge['password'], $teamId);
         }
         return $returnArray;
     }

@@ -4,7 +4,6 @@
 		<meta charset="utf-8">
 			<link rel="stylesheet" type="text/css" href="css/header.php" />
 			<link rel="stylesheet" type="text/css" href="css/style.css" />
-			<link rel="stylesheet" type="text/css" href="css/polar-clock.css" />
 			<script src="js/jquery-2.1.1.min.js"></script>
 			<script src="js/script.js"></script>
 
@@ -38,13 +37,13 @@
 		</div>
 		<div id="navbar">
 			<a href="index.php">Home</a>
-			<a href="#" onclick="scoreboard();">Scoreboard</a>
-			<a href="#" onclick="rules();">Rules</a>
+			<a href="javascript:void(0)" onclick="scoreboard();">Scoreboard</a>
+			<a href="javascript:void(0)" onclick="rules();">Rules</a>
 			<?php 
 			switch (getAccessLevel()) {
 				case 0:
-					echo "<a href='#' onclick='login();'>Login</a>";
-					echo "<a href='#' onclick='register();'>Register</a>";
+					echo "<a href='javascript:void(0)' onclick='login();'>Login</a>";
+					echo "<a href='javascript:void(0)' onclick='register();'>Register</a>";
 					break;
 				case 1:
                     $teamType = getTeamType();
@@ -53,11 +52,11 @@
                     }
 					if($teamType == 1 || $teamType == 3) {//Red or Purple team
                         echo "<a href='achievements.php'>Achievements</a>";
-                        echo "<a href='#' onclick='submitFlag();'>Submit Flag</a>";
+                        echo "<a href='javascript:void(0)' onclick='submitFlag();'>Submit Flag</a>";
                     }
 
-                    echo "<a href='#' onclick='logout();'>Logout</a>";
-                    echo "<a href='#' onclick='void(0);'></a>";
+                    echo "<a href='javascript:void(0)' onclick='logout();'>Logout</a>";
+                    echo "<a href='javascript:void(0)' onclick='void(0);'></a>";
 
                     if($teamType == 1 || $teamType == 3) {//Red or Purple team
                         $team = dbRaw("SELECT t.id as tid, t.teamname, SUM(DISTINCT(ct.value)) as currentScore FROM teams AS t INNER JOIN attempts AS a ON t.id=a.teamid AND a.correct=1 INNER JOIN flag AS f ON a.flagSubmitted = f.flag INNER JOIN challenge_instance AS c ON c.flagId = f.id INNER  JOIN challenge_templates AS ct ON ct.id = c.parentId WHERE t.id=" . $_SESSION['teamid'] . " GROUP BY t.id ORDER BY currentScore DESC");
@@ -66,11 +65,11 @@
                             $team[0]['currentScore'] = "";
                         }
 
-                        echo "<a href='#' onclick='void(0);'>" . $team[0]['teamname'] . "      " . $team[0]['currentScore'] . "</a>";
+                        echo "<a href='javascript:void(0)' onclick='void(0);'>" . $team[0]['teamname'] . "      " . $team[0]['currentScore'] . "</a>";
                     }
 					break;
 				case 2:
-					echo "<a href='#' onclick='logout();'>Logout</a>";
+					echo "<a href='javascript:void(0)' onclick='logout();'>Logout</a>";
 					echo "<a href='admin.php'>Admin</a>";
 					break;
 			}

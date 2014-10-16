@@ -14,9 +14,11 @@
 	width: 200px;
 }
 
+.adminForms{
+    padding-bottom: 20px;
+}
 
-
-#addChallenge, #challengeEditForm{
+#addChallenge{
 	width: 130px;
 	text-align: center;
 	float: right;
@@ -24,18 +26,6 @@
 }
 
 
-.tacontainer *{
-	vertical-align: top;
-}
-
-.tacontainer textarea{
-	width: 500px;
-	height: 100px;
-}
-
-.tacontainer label{
-	width: 50px;
-}
 
 .stateImg{
 	float: right;
@@ -48,4 +38,56 @@
 
 .pane ul li{
 	height: 30px;
+}
+
+#rtms{
+    width: 100%;
+    height: 45px;
+    position: relative;
+}
+
+#rtms input[type="submit"], #rtms input[type="text"]{
+    float: right;
+}
+
+#rtms input[type="text"]{
+    height: 33px;
+    width: 50%;
+}
+
+#rtms label{
+    float: right;
+    color: #CCC;
+    padding-top: 10px;
+    padding-right: 10px;
+    font-family: PressStart;
+}
+
+/***********
+*Game Setup*
+************/
+
+#gsTimeManagement label{
+    width: 100px;
+}
+
+#gsMotd label{
+    width: 100px;
+    vertical-align: top;
+}
+
+#gsHeaderConfig input[type="text"]{
+    width: 200px;
+    vertical-align: top;
+}
+
+#gsHeaderConfig textarea{
+    width: 500px;
+}
+#gsHeaderConfig label{
+    vertical-align: top;
+}
+
+.smallHr{
+    width: 75%;
 }

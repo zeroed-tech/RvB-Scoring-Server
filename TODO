@@ -1,6 +1,0 @@
--Add error checking
--Fix score board
--Move container management to callable scripts that can be run as background tasks
--Add xss validation
--log output from backend scripts to the web page
--Fix the edit button panel buttons css

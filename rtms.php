@@ -54,8 +54,12 @@ if(isset($_SESSION['BGProcess'])){
     }
 }
 
+//If this is a new person then set their current message ID to the newest message so they don't get flooded with every message that has been sent
+if(!isset($_SESSION['lastRTMSId'])){
+    $_SESSION['lastRTMSId'] = dbSelect("rtmsMessageQueue",array("MAX(id)"), array(), false)[0]['MAX(id)'];
+}
 
-$sql = "SELECT * FROM rtmsMessageQueue WHERE timeAdded > ".(time()-30);
+$sql = "SELECT * FROM rtmsMessageQueue WHERE id > ".$_SESSION['lastRTMSId'];
 $toSend = dbRaw($sql);//Get all messages from the last 30 seconds
 
 if(count($toSend) == 0){
@@ -64,6 +68,6 @@ if(count($toSend) == 0){
 
 foreach($toSend as $message){
     pushStatusUpdate($message['type'], $message['message'], $message['id']);
-    $lastSentId = $message['id'];
+    $_SESSION['lastRTMSId'] = $message['id'];
 }
 

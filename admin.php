@@ -141,15 +141,10 @@ if (isset($_POST['data'])) {
                 $callbackArgs = array($data->challengeName, $data->challengeAuthor, $data->scoreValue, $uploadDir);
 
                 $bp = new BackgroundProcess($command, "addContainerToDatabase", $callbackArgs);
-                $bp->run("/tmp/rvbScriptOutput");
+                $bp->run($uploadDir."rvbCreateContainerOutput");
 
+                //Store the background process object in a session variable
                 $_SESSION['BGProcess'] = serialize($bp);
-
-                //$_SESSION['containervals_uploaddir'] = $uploadDir;
-                //$_SESSION['containervals_name'] = $data->challengeName;
-                //$_SESSION['containervals_author'] = $data->challengeAuthor;
-                //$_SESSION['containervals_points'] = $data->scoreValue;
-                //$_SESSION['containervals_baseimage'] = $data->baseImage;
 
                 echo json_encode(array('result' => 'true', 'message' => 'Challenge added to background queue'));
             } else {
@@ -180,7 +175,7 @@ if (isset($_POST['data'])) {
             }
             break;
         }
-        case 'enableChallenge': {//Enable challenges // TODO add error message
+        case 'enableChallenge': {
             enableChallenge($data->challengeId);
             echo json_encode(array('result' => 'true', 'message' => 'Challenge ' . "enabled"));
             break;
@@ -194,9 +189,18 @@ if (isset($_POST['data'])) {
             deleteChallenge($data->challengeId);
             break;
         }
+        case 'consoleOutput':{
+            $output = dbSelect("challenge_templates",array("consoleOutput"), array("id"=>$data->challengeId), false);
+            if(count($output) != 0 && strlen($output[0]['consoleOutput']) > 0){
+                echo json_encode(array('consoleOutput' => nl2br($output[0]['consoleOutput'])));
+            }else{
+                echo json_encode(array('consoleOutput' => 'No console output found'));
+            }
+            break;
+        }
         case 'updateConfig': {
             //Update game config
-            $res = dbUpdate("config", array("startTime" => $data->startTime, "endTime" => $data->endTime, "motd" => $data->motd, "leftHeader" => $data->leftHeader, "centerHeader" => $data->centerHeader, "rightHeader" => $data->rightHeader), array("id" => 1));
+            $res = dbUpdate("config", array("startTime" => $data->startTime, "duration" => $data->duration, "motd" => $data->motd, "rules"=>$data->rules, "leftHeader" => $data->leftHeader, "centerHeader" => $data->centerHeader, "rightHeader" => $data->rightHeader), array("id" => 1));
             echo json_encode(array('result' => ($res == null ? 'true' : 'false')));
             break;
         }
@@ -228,8 +232,12 @@ if (isset($_POST['data'])) {
     require('header.php');
     echo "<div id='backPane' onclick='hidePopup();'></div>";
         ?>
-    <input type="text" id="broadcastMessage" /><input id="sendBroadcast" type="submit">
-        <div id="usermanagement" class="section">
+    <div id="rtms">
+        <input id="sendBroadcast" type="submit" value="Send">
+        <input type="text" id="broadcastMessage" />
+        <label for="broadcastMessage"">Broadcast Message</label>
+    </div>
+        <div id="teammanagement" class="section">
             <h2 class="sectionHeader">Team Management</h2>
 
             <div class="sectionContent">
@@ -246,24 +254,24 @@ if (isset($_POST['data'])) {
                         <td></td>
                     </tr>
                     <?php
-                    $users = getUserList();
+                    $teams = getTeamList();
 
-                    foreach ($users as $user) {
+                    foreach ($teams as $team) {
                         echo "<tr>";
-                        echo "<td>" . $user['id'] . "</td>";
-                        echo "<td>" . $user['teamname'] . "</td>";
-                        echo "<td>" . ($user['enabled'] == 1 ? "Enabled" : "Disabled") . "</td>";
-                        if($user['isAdmin'] == 1){
+                        echo "<td>" . $team['id'] . "</td>";
+                        echo "<td>" . $team['teamname'] . "</td>";
+                        echo "<td>" . ($team['enabled'] == 1 ? "Enabled" : "Disabled") . "</td>";
+                        if($team['isAdmin'] == 1){
                             echo "<td>Admin</td>";
                             echo "<td>True</td>";
                         }else {
-                            echo "<td>" . ($user['type'] == 0 ? "Admin" : ($user['type'] == 1 ? "Red" : ($user['type'] == 2) ? "Blue" : ($user['type'] == 3 ? "Purple" : "NA"))) . "</td>";
+                            echo "<td>" . ($team['type'] == 0 ? "Admin" : ($team['type'] == 1 ? "Red" : ($team['type'] == 2) ? "Blue" : ($team['type'] == 3 ? "Purple" : "NA"))) . "</td>";
                             echo "<td>False</td>";
                         }
-                        echo "<td><a href='jscript:void(0)' class='enableTeam tableButtons " . ($user['enabled'] == 1 ? "red" : "green") . "'>" . ($user['enabled'] == 1 ? "Disable" : "Enable") . " Team </a></td>";
-                        echo "<td><a href='jscript:void(0)' class='makeAdmin tableButtons " . ($user['isAdmin'] == 1 ? "red" : "green") . "'>" . ($user['isAdmin'] == 1 ? "Revoke Admin" : "Promote to Admin") . "</a></td>";
-                        echo "<td><a href='jscript:void(0)' class='deleteTeam tableButtons red'>Delete Team</a></td>";
-                        echo "<td><a href='jscript:void(0)' class='resetPassword tableButtons blue'>Reset Password</a></td>";
+                        echo "<td><a href='javascript:void(0)' class='enableTeam tableButtons " . ($team['enabled'] == 1 ? "red" : "green") . "'>" . ($team['enabled'] == 1 ? "Disable" : "Enable") . " Team </a></td>";
+                        echo "<td><a href='javascript:void(0)' class='makeAdmin tableButtons " . ($team['isAdmin'] == 1 ? "red" : "green") . "'>" . ($team['isAdmin'] == 1 ? "Revoke Admin" : "Promote to Admin") . "</a></td>";
+                        echo "<td><a href='javascript:void(0)' class='deleteTeam tableButtons red'>Delete Team</a></td>";
+                        echo "<td><a href='javascript:void(0)' class='resetPassword tableButtons blue'>Reset Password</a></td>";
                         echo "</tr>";
                     }
 
@@ -276,7 +284,7 @@ if (isset($_POST['data'])) {
             <h2 class="sectionHeader">Challenge Management</h2>
 
             <div class="sectionContent">
-                <a href='jscript:void(0)' onclick="addChallenge()" id='addChallenge' class='modifyButton'>Add
+                <a href='javascript:void(0)' onclick="addChallenge()" id='addChallenge' class='modifyButton'>Add
                     Challenge</a><br/><br/>
                 <?php
                 $challenges = getChallengeList();
@@ -287,54 +295,51 @@ if (isset($_POST['data'])) {
             </div>
         </div>
 
-        <div id="challengeconfiguration" class="section">
-            <h2 class="sectionHeader">Challenge Configuration</h2>
+        <div id="gamesetup" class="section">
+            <h2 class="sectionHeader">Game Setup</h2>
 
             <div class="sectionContent">
 
-                <h3>Time Management</h3><br/>
-                <label for="startTime">Start Time:</label>
-                <input class='configInput' type="text" id="startTime" value="<?php echo "$CONFIG->startDate"; ?>"/><br/>
-                <label for="endTime">End Time:</label>
-                <input class='configInput' type="text" id="endTime" value="<?php echo "$CONFIG->endDate"; ?>"/><br/>
+                <div id="gsTimeManagement">
+                    <h3>Time Management</h3><br/>
+                    <label for="startTime">Start Time:</label>
+                    <input class='configInput' type="text" id="startTime" value="<?php echo "$CONFIG->startDate"; ?>"/><br/>
+                    <label for="duration">Duration (hrs):</label>
+                    <input class='configInput' type="text" id="duration" value="<?php echo "$CONFIG->duration"; ?>"/><br/>
+                </div>
                 <hr/>
-					<span class='tacontainer'>
-						<label for="motd_edit">Message of the day:</label>
-						<textarea id="motd_edit"><?php echo "$CONFIG->motd"; ?></textarea><br/>
-					</span>
+                <div id="gsMotd">
+                    <h3>Message Configuration</h3>
+                    <br />
+					<label for="motd_edit">Message of the day:</label>
+					<textarea id="motd_edit"><?php echo "$CONFIG->motd"; ?></textarea><br/>
+                    <label for="rules">Rules:</label>
+                    <textarea id="rules"><?php echo "$CONFIG->rules"; ?></textarea><br/>
+                </div>
                 <hr/>
-                <h3>Header Configuration</h3>
-                <button style="margin-top: 25px;float:right;" onclick="resetStyles();">Reset Styles</button>
-                <br/>
-                <label for"leftHeaderSet">Left Word:</label>
-                <input class='configInput' type="text" id="leftHeaderSet"
-                       value="<?php echo explode('<><>', $CONFIG->leftHeader)[0]; ?>"/>
-					
-					<span class='tacontainer'>
-						<label for="leftHeaderStyle">Style:</label>
-						<textarea id="leftHeaderStyle"><?php echo explode('<><>', $CONFIG->leftHeader)[1]; ?></textarea><br/>
-					</span>
+                <div id="gsHeaderConfig">
+                    <h3>Header Configuration</h3>
 
-                <label for="centerHeaderSet">Center Word:</label>
-                <input class='configInput' type="text" id="centerHeaderSet"
-                       value="<?php echo explode('<><>', $CONFIG->centerHeader)[0]; ?>"/>
-					<span class='tacontainer'>
-						<label for"centerHeaderStyle">Style:</label>
-                        <textarea
-                            id="centerHeaderStyle"><?php echo explode('<><>', $CONFIG->centerHeader)[1]; ?></textarea><br/>
-					</span>
+                    <br/>
+                    <label for="leftHeaderSet">Left Word:</label>
+                    <input class='configInput' type="text" id="leftHeaderSet" value="<?php echo explode('<><>', $CONFIG->leftHeader)[0]; ?>"/>
+                    <label for="leftHeaderStyle">Style:</label>
+                    <textarea id="leftHeaderStyle"><?php echo explode('<><>', $CONFIG->leftHeader)[1]; ?></textarea><br/>
+                    <hr class="smallHr" />
+                    <label for="centerHeaderSet">Center Word:</label>
+                    <input class='configInput' type="text" id="centerHeaderSet" value="<?php echo explode('<><>', $CONFIG->centerHeader)[0]; ?>"/>
+                    <label for="centerHeaderStyle">Style:</label>
+                    <textarea id="centerHeaderStyle"><?php echo explode('<><>', $CONFIG->centerHeader)[1]; ?></textarea><br/>
+                    <hr class="smallHr" />
+                    <label for="rightHeaderSet">Right Word:</label>
+                    <input class='configInput' type="text" id="rightHeaderSet" value="<?php echo explode('<><>', $CONFIG->rightHeader)[0]; ?>"/>
+                    <label for="rightHeaderStyle">Style:</label>
+                    <textarea id="rightHeaderStyle"><?php echo explode('<><>', $CONFIG->rightHeader)[1]; ?></textarea><br/>
 
 
-                <label for="rightHeaderSet">Right Word:</label>
-                <input class='configInput' type="text" id="rightHeaderSet"
-                       value="<?php echo explode('<><>', $CONFIG->rightHeader)[0]; ?>"/>
-					
-					<span class='tacontainer'>
-						<label for="rightHeaderStyle">Style:</label>
-						<textarea
-                            id="rightHeaderStyle"><?php echo explode('<><>', $CONFIG->rightHeader)[1]; ?></textarea><br/>
-					</span>
-                <button style="float:right; margin-top:-20px;" onclick="updateGameRules();">Update Rules</button>
+                    <a href='javascript:resetStyles();' class='red'>Reset Styles</a>
+                    <a href='javascript:updateGameRules();' class='green'>Update Rules</a>
+                </div>
             </div>
         </div>
         <div id="containerManagement" class="section">
@@ -369,10 +374,10 @@ if (isset($_POST['data'])) {
                         echo "<td class='containerName'>" . $row['0'] . "</td>";
                         echo "<td>" . $row['1'] . "</td>";
                         echo "<td>" . $row['2'] . "</td>";
-                        echo "<td><a href='jscript:void(0)' class='green startContainer'>Start Container</a></td>";
-                        echo "<td><a href='jscript:void(0)' class='red stopContainer'>Stop Container</a></td>";
-                        echo "<td><a href='jscript:void(0)' class='red deleteContainer'>Delete Container</a></td>";
-                        echo "<td><a href='jscript:void(0)' class='blue regenFlag'>Regenerate Flag</a></td>";
+                        echo "<td><a href='javascript:void(0)' class='green startContainer'>Start Container</a></td>";
+                        echo "<td><a href='javascript:void(0)' class='red stopContainer'>Stop Container</a></td>";
+                        echo "<td><a href='javascript:void(0)' class='red deleteContainer'>Delete Container</a></td>";
+                        echo "<td><a href='javascript:void(0)' class='blue regenFlag'>Regenerate Flag</a></td>";
                         echo "</tr>";
                     }
 

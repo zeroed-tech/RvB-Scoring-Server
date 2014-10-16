@@ -11,12 +11,10 @@
  teamType - determines if this team should be Red, Blue or Purple
  */
 function enableTeam(teamId, enabling, target, $teamType) {
-    var data = new Object();
-    data.functionCall = enabling ? "enable" : "disable";
+    var data = {functionCall:enabling ? "enable" : "disable", teamId: teamId};
     if(enabling){
         data.teamType = $teamType;
     }
-    data.teamId = teamId;
     postData("admin.php", "data=" + JSON.stringify(data), function () {
         if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
             var results = JSON.parse(xmlhttp.responseText);
@@ -46,10 +44,7 @@ function enableTeam(teamId, enabling, target, $teamType) {
 function makeAdmin(teamId, revoke, target) {
     var confirmMessage = (revoke == 0 ? "Making a team an admin will give them the same access rights as you have. Are you sure you wish to proceed?" : "Revoking a teams admin rights will prevent them from accessing the admin console. Are you sure you wish to proceed?");
     if (confirm(confirmMessage)) {
-        var data = new Object();
-        data.functionCall = 'makeAdmin';
-        data.teamId = teamId;
-        data.revoke = revoke;
+        var data = {functionCall: "makeAdmin", teamId: teamId, revoke: revoke};
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);
@@ -78,9 +73,7 @@ function makeAdmin(teamId, revoke, target) {
  */
 function deleteTeam(teamId, target) {
     if (confirm("Are you sure you want to delete this team?")) {
-        var data = new Object();
-        data.functionCall = 'deleteTeam';
-        data.teamId = teamId;
+        var data = {functionCall: "deleteTeam", teamId: teamId};
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);
@@ -99,10 +92,7 @@ function deleteTeam(teamId, target) {
 function resetPassword(teamId) {
     var newPassword = prompt("Enter the new password for team "+teamId);
     if(newPassword != null) {
-        var data = new Object();
-        data.functionCall = 'resetPassword';
-        data.teamId = teamId;
-        data.newPassword = newPassword;
+        var data = {functionCall: "resetPassword", teamId: teamId, newPassword: newPassword};
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);
@@ -144,16 +134,15 @@ function addChallenge(addChallenge) {
 				<select name="baseImage" id="baseImage"> \
 				</select> \
 			</label> \
+			<div id="progressbarouter"><div id="progressbarinner"></div><div id="progresstext">0%</div></div> \
 			<input type="submit" value="Add Challenge"> \
 		</form> \
-		<div id="progressbarouter"><div id="progressbarinner"></div><div id="progresstext">0%</div></div> \
 	</div>');
 
-    var data = new Object();
-    data.functionCall = 'getBaseContainers';
+    var data = {functionCall: "getBaseContainers"};
     postData("admin.php", "data=" + JSON.stringify(data), function () {
         if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-            results = JSON.parse(xmlhttp.responseText);
+            var results = JSON.parse(xmlhttp.responseText);
             results.forEach(function (entry) {
                 $('#baseImage').append('<option value="' + entry + '">' + entry + '</option>');
             });
@@ -164,12 +153,7 @@ function addChallenge(addChallenge) {
     $('#challengeUploadForm').submit(function (event) {
         event.preventDefault();
 
-        var data = new Object();
-        data.functionCall = 'addChallenge';
-        data.challengeName = $('#challengeName').val();
-        data.challengeAuthor = $('#challengeAuthor').val();
-        data.scoreValue = $('#scoreValue').val();
-        data.baseImage = $('#baseImage').val()
+        var data = {functionCall: 'addChallenge',challengeName: $('#challengeName').val(),challengeAuthor: $('#challengeAuthor').val(),scoreValue: $('#scoreValue').val(),baseImage: $('#baseImage').val()};
 
         var options = {
             beforeSubmit: preSubmit,
@@ -180,26 +164,6 @@ function addChallenge(addChallenge) {
         };
         $(this).ajaxSubmit(options);
 
-        /*
-        //Fade the panel out and change it to the status screen
-        var loadingRing = '<div class="outer"><div class="inner"><div class="loadingBar bar1"></div><div class="loadingBar bar2"></div><div class="loadingBar bar3"></div><div class="loadingBar bar4"></div><div class="loadingBar bar5"></div><div class="loadingBar bar6"></div><div class="loadingBar bar7"></div><div class="loadingBar bar8"></div></div></div>'
-        $('.pane').html('<ul> \
-			<li>Cloning base container'+loadingRing+'<img class="stateImg" src="" /></li> \
-			<hr /> \
-			<li>Starting container'+loadingRing+'<img class="stateImg" src="" /></li> \
-			<hr /> \
-			<li>Uploading files to container'+loadingRing+'<img class="stateImg" src="" /></li> \
-			<hr /> \
-			<li>Configuring container using uploaded tarball'+loadingRing+'<img class="stateImg" src="" /></li> \
-			<hr /> \
-			<li>Saving challenge to database'+loadingRing+'<img class="stateImg" src="" /></li> \
-			</ul>');
-
-        $('.outer').hide();
-        $('.pane ul li:nth-child(1) div').fadeIn("slow");
-        $('.pane').fadeIn("fast");
-        */
-        hidePopup();
 
     });
     showPane();
@@ -212,18 +176,11 @@ function addChallenge(addChallenge) {
 
 
 /*
- This function is the equivilant to submitting a form.
- The primary difference is this concatinates the header fields with their respective styles before storing in the database
+ This function is the equivalent to submitting a form.
+ The primary difference is this concatenates the header fields with their respective styles before storing in the database
  */
 function updateGameRules() {
-    var data = new Object();
-    data.functionCall = 'updateConfig';
-    data.startTime = $("#startTime").val();
-    data.endTime = $("#endTime").val();
-    data.motd = $("#motd_edit").val();
-    data.leftHeader = $("#leftHeaderSet").val() + "<><>" + $("#leftHeaderStyle").val();
-    data.centerHeader = $("#centerHeaderSet").val() + "<><>" + $("#centerHeaderStyle").val();
-    data.rightHeader = $("#rightHeaderSet").val() + "<><>" + $("#rightHeaderStyle").val();
+    var data = {functionCall: 'updateConfig',startTime: $("#startTime").val(),duration: $("#duration").val(),motd: $("#motd_edit").val(), rules:$("#rules").val(),leftHeader: $("#leftHeaderSet").val() + "<><>" + $("#leftHeaderStyle").val(),centerHeader: $("#centerHeaderSet").val() + "<><>" + $("#centerHeaderStyle").val(),rightHeader: $("#rightHeaderSet").val() + "<><>" + $("#rightHeaderStyle").val()};
 
     postData("admin.php", "data=" + JSON.stringify(data), function () {
         if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
@@ -248,9 +205,8 @@ function resetStyles() {
 $(document).ready(function () {
 
     $("#sendBroadcast").click(function(event){
-        var data = new Object();
-        data.functionCall = 'broadcastMessage';
-        data.message = $("#broadcastMessage").val();
+        var data = {functionCall: "broadcastMessage", message: $("#broadcastMessage").val()};
+
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);
@@ -295,12 +251,7 @@ $(document).ready(function () {
 
     $(".makeAdmin").click(function (event) {
         var id = $(this).parent().parent().children()[0].innerHTML;
-        var revoke = false;
-        if($(this).hasClass("red")){
-            revoke = true;
-        }else{
-            revoke = false;
-        }
+        var revoke = ($(this).hasClass("red") ? true : false);
         makeAdmin(id, revoke, $(this));
     });
 
@@ -321,12 +272,10 @@ $(document).ready(function () {
         var id = $(this).parent().attr("id").split('_')[1];
         $(this).parent().parent().removeClass("disabled");
         $(this).parent().parent().addClass("enabled");
-        var data = new Object();
-        data.functionCall = 'enableChallenge';
-        data.challengeId = id;
+        var data = {functionCall: "enableChallenge", challengeId: id};
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
-                results = JSON.parse(xmlhttp.responseText);
+                var results = JSON.parse(xmlhttp.responseText);
                 showMessage(results.message, results.result, false);
             }
         });
@@ -336,9 +285,7 @@ $(document).ready(function () {
         var id = $(this).parent().attr("id").split('_')[1];
         $(this).parent().parent().removeClass("enabled");
         $(this).parent().parent().addClass("disabled");
-        var data = new Object();
-        data.functionCall = 'disableChallenge';
-        data.challengeId = id;
+        var data = {functionCall: "disableChallenge", challengeId: id};
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);
@@ -352,9 +299,7 @@ $(document).ready(function () {
         var clickedChallenge = $(this).parent();
         var id = clickedChallenge.attr("id").split('_')[1];
 
-        var data = new Object();
-        data.functionCall = 'editChallenge';
-        data.challengeId = id;
+        var data = {functionCall: "editChallenge", challengeId: id};
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);
@@ -378,12 +323,7 @@ $(document).ready(function () {
                 $('#challengeEditForm').submit(function (event) {
                     event.preventDefault();
 
-                    var data = new Object();
-                    data.functionCall = 'editChallenge';
-                    data.challengeAuthor = $('#challengeAuthor').val();
-                    data.scoreValue = $('#scoreValue').val();
-                    data.challengeId = id;
-
+                    var data = {functionCall: "editChallenge", challengeAuthor: $('#challengeAuthor').val(),scoreValue: $('#scoreValue').val(),challengeId: id};
                     postData("admin.php", "data=" + JSON.stringify(data), function () {
                         if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                             var results = JSON.parse(xmlhttp.responseText);
@@ -402,13 +342,25 @@ $(document).ready(function () {
         });
     });
 
+    $(".challenge").hover(function(event){
+        switch(event.type){
+            case 'mouseenter':
+                $(this).find(".delete").slideToggle(0);
+                break;
+            case 'mouseleave':
+                $(this).find(".delete").slideToggle(0);
+                break;
+            default :
+                break;
+        }
+    });
+
+
     $(".delete").click(function (event) {
         var id = $(this).parent().attr("id").split('_')[1];
         if (confirm("This will delete all instances of this this challenge including the template.\n\n Are you sure you wish to continue?")) {
-            $(this).parent().parent().hide();
-            var data = new Object();
-            data.functionCall = 'deleteChallenge';
-            data.challengeId = id;
+            $(this).parent().parent().fadeOut(700);
+            var data = {functionCall: "deleteChallenge",challengeId: id};
             postData("admin.php", "data=" + JSON.stringify(data), function () {
                 if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                     var results = JSON.parse(xmlhttp.responseText);
@@ -418,20 +370,36 @@ $(document).ready(function () {
         }
     });
 
+    $(".consoleOutput").click(function (event) {
+        var id = $(this).parent().attr("id").split('_')[1];
+        var data = new Object();
+        data.functionCall = 'consoleOutput';
+        data.challengeId = id;
+        postData("admin.php", "data=" + JSON.stringify(data), function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var results = JSON.parse(xmlhttp.responseText);
+                var output = results.consoleOutput;
+                $('#backPane').html(' \
+                <div class="pane" onclick="event.stopPropagation();"> \
+                    <p>'+output+'</p> \
+                </div>');
+                showPane();
+            }
+        });
+    });
+
     /**
      * Container Management
      */
     $(".startContainer").click(function (event) {
-        var data = new Object();
-        data.functionCall = 'startContainer';
-        data.containerName = $(this).parent().parent().children()[0].innerHTML;
+        var data = {functionCall: "startContainer",containerName: $(this).parent().parent().children()[0].innerHTML};
         $(this).parent().parent().children("td:nth-child(2)").html("RUNNING");
         postData("admin.php", "data=" + JSON.stringify(data), function () {
         });
     });
 
     $(".stopContainer").click(function (event) {
-        var data = new Object();
+        var data = {functionCall: "stopContainer",containerName: $(this).parent().parent().children()[0].innerHTML};
         data.functionCall = 'stopContainer';
         data.containerName = $(this).parent().parent().children()[0].innerHTML;
         $(this).parent().parent().children("td:nth-child(2)").html("STOPPED");
@@ -441,7 +409,7 @@ $(document).ready(function () {
 
     $(".deleteContainer").click(function (event) {
         if (confirm("WARNING\n\nDeleting this container will NOT remove it from the database, only the OS. This should only be done in the event that the database encountered an error while deleting a container causing it to no longer show up in challenge management.\n\n Are you sure your wish to delete this container?")) {
-            var data = new Object();
+            var data = {functionCall: "deleteContainer",containerName: $(this).parent().parent().children()[0].innerHTML};
             data.functionCall = 'deleteContainer';
             data.containerName = $(this).parent().parent().children()[0].innerHTML;
             $(this).parent().parent().slideToggle('fast');
@@ -451,7 +419,7 @@ $(document).ready(function () {
     });
 
     $(".regenFlag").click(function (event) {
-        var data = new Object();
+        var data = {functionCall: "regenFlag",containerName: $(this).parent().parent().children()[0].innerHTML};
         data.functionCall = 'regenFlag';
         data.containerName = $(this).parent().parent().children()[0].innerHTML;
         postData("admin.php", "data=" + JSON.stringify(data), function () {
@@ -482,7 +450,7 @@ function preSubmit() {
         return false;
     }
     if ($("#challengeFiles").val().length < 1) {
-        showMessage("A prerequisite of making a challenge is that you actually have a challenge. Select your challenge tar ball", false, false);
+        showMessage("A prerequisite of making a challenge is that you actually have a challenge. Select your compressed challenge files", false, false);
         return false;
     }
     //Check that the browser supports everything we need
@@ -523,8 +491,10 @@ function submitProgress(event, position, total, percentComplete) {
 
 function postSubmit(responseText, status) {
     var results = JSON.parse(responseText);
-
     showMessage(results.message, results.result, false);
+    if(results.result){
+        hidePopup();
+    }
 }
 
 

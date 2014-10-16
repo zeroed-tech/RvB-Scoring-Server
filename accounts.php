@@ -8,7 +8,7 @@
 				$_SESSION = array();
 				if (ini_get("session.use_cookies")) {
 				    $params = session_get_cookie_params();
-				    setcookie(session_name("DarcAuth"), '', time() - 42000,
+				    setcookie(session_name("RvB"), '', time() - 42000,
 				        $params["path"], $params["domain"],
 				        $params["secure"], $params["httponly"]
 				    );
@@ -19,18 +19,19 @@
 			}
 			case 'login':{
 				//Select user that has the passed in teamname and password hash
-				$user = dbSelect("teams", array(), array('teamname'=>$data->teamName,'password'=>md5($data->teamPassword)), false);
+				$team = dbSelect("teams", array(), array('teamname'=>$data->teamName,'password'=>md5($data->teamPassword)), false);
 				//Check that a result was returned
-				if(!$user || count($user) == 0){
+				if(!$team || count($team) == 0){
 					echo json_encode(array('result'=>false, 'message'=>'No account was found with the provided details'));
 					exit();
 				}else{
-					if ($user[0]['enabled'] == 0) {
+					if ($team[0]['enabled'] == 0) {
 						echo json_encode(array('result'=>false, 'message'=>'Account is currently disabled'));
 						exit();
 					}
 					//User is logged in. Store their teamid in the session variable
-					$_SESSION['teamid'] = $user[0]['id'];
+					$_SESSION['teamid'] = $team[0]['id'];
+                    $_SESSION['teamName'] = $team[0]['teamname'];
 					//Check to see if the team id is in the admin table
 					$adminCheck = dbSelect("admins",array(),array('id'=>$_SESSION['teamid']), false);
 					//If a non empty result set was returned then the user ID was found in the admins table

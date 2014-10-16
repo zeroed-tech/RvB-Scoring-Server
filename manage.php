@@ -52,7 +52,7 @@ if(isset($_POST['data'])){
             <?php
             $challenges = getChallengesForCurrentTeam($_SESSION['teamid']);
             foreach ($challenges as $challenge) {
-                echo $challenge->printUserChallenge();
+                echo $challenge->printTeamChallenge();
             }
             ?>
         </div>
