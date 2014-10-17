@@ -23,6 +23,15 @@ function pushMessage($message){
     flush();
 }
 
+//If this is a new person then set their current message ID to the newest message so they don't get flooded with every message that has been sent
+if(!isset($_SESSION['lastRTMSId'])){
+    $_SESSION['lastRTMSId'] = dbSelect("rtmsMessageQueue",array("MAX(id)"), array(), false)[0]['MAX(id)'];
+    if($_SESSION['lastRTMSId'] == null){
+        $_SESSION['lastRTMSId'] = -1;
+    }
+}
+
+
 //Check to see if this user has any background processes running
 if(isset($_SESSION['BGProcess'])){
     //Background process found
@@ -54,10 +63,7 @@ if(isset($_SESSION['BGProcess'])){
     }
 }
 
-//If this is a new person then set their current message ID to the newest message so they don't get flooded with every message that has been sent
-if(!isset($_SESSION['lastRTMSId'])){
-    $_SESSION['lastRTMSId'] = dbSelect("rtmsMessageQueue",array("MAX(id)"), array(), false)[0]['MAX(id)'];
-}
+
 
 $sql = "SELECT * FROM rtmsMessageQueue WHERE id > ".$_SESSION['lastRTMSId'];
 $toSend = dbRaw($sql);//Get all messages from the last 30 seconds

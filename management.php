@@ -96,9 +96,7 @@ if(isset($_POST['data'])){
             }
             case 'getRules':{
                 $res = array();
-                error_log($CONFIG->rules);
                 $rules = explode("\n", $CONFIG->rules);
-                error_log(count($rules));
                 foreach ($rules as $rule) {
                     $res[] = array('rule' => $rule);
                 }

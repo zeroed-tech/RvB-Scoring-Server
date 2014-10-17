@@ -8,16 +8,17 @@ require('challengeManagement.php');
  *    Note: $filter is case sensitive
  *
  *    @param $filter string A regular expression used to match container names
+ *    @param $inverse bool Inverts the expression so it matches things that didn't match before
  *
  *    @returns array An array of containers that have a name matching $filter
  */
-function getContainers($filter)
+function getContainers($filter, $inverse=false)
 {
     $matchedContainers = array();
     $results = array();
     exec('sudo ls /var/lib/lxc', $results);
     foreach ($results as $result) {
-        if (preg_match($filter, $result) == 1) {
+        if (preg_match($filter, $result) == ($inverse ? 0:1)) {
             $matchedContainers[] = $result;
         }
     }
@@ -136,7 +137,7 @@ if (isset($_POST['data'])) {
                 //Delete the uploaded zip file
                 //unlink($fileName);
 
-                $command = "/usr/bin/rvbCreateContainer ".$uploadDir." ".$data->baseImage." ".preg_replace("/[^A-Za-z0-9]/", '', $data->challengeName);
+                $command = "/usr/bin/rvbCreateContainer ".$uploadDir." ".$data->baseImage." ".preg_replace("/[^A-Za-z0-9]/", '', $data->challengeName)." ".($data->symlink ? "true":"false");
 
                 $callbackArgs = array($data->challengeName, $data->challengeAuthor, $data->scoreValue, $uploadDir);
 
@@ -167,7 +168,6 @@ if (isset($_POST['data'])) {
 
                 $res = dbUpdate("challenge_templates", array("author" => $data->challengeAuthor, "value" => $data->scoreValue), array("id" => $data->challengeId));
 
-                error_log($res);
                 echo json_encode(array('result' => $res, 'message' => ($res ? "Challenge updated" : "An error occurred whilst updating the challenge details. Check the PHP error log for assistance in debugging this issue")));
             } else {
                 $res = dbSelect("challenge_templates", array(), array("id" => $data->challengeId), false)[0];
@@ -222,6 +222,38 @@ if (isset($_POST['data'])) {
             setFlagForContainer($data->containerName);
             break;
         }
+        //DANGER ZONE FUNCTIONS
+        case "nukeTeams":{
+            dbTruncate("attempts");
+            dbTruncate("challenge_instance");
+            dbTruncate("flag");
+            dbTruncate("rtmsMessageQueue");
+            dbRaw("DELETE FROM teams WHERE id <> 1");
+            $toDelete = getContainers("/^Team.*$/");
+            foreach($toDelete as $delete){
+                deleteContainer($delete);
+            }
+            break;
+        }
+
+        case "apocalypse":{
+            $toDelete = getContainers("/^.*-Base$/", true);
+            foreach($toDelete as $delete){
+                deleteContainer($delete);
+            }
+            //Invalidate the old DB connection as it is referencing the database we are trying to drop
+            $con = null;
+            $con = new PDO("mysql:host=".dbhost.";charset=utf8", dbuser, dbpass);
+            dbRaw("DROP DATABASE IF EXISTS `RvB`");
+            dbRaw("CREATE DATABASE IF NOT EXISTS `RvB` DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci;");
+            $con = null;
+            $con = new PDO("mysql:host=".dbhost.";dbname=".dbname.";charset=utf8", dbuser, dbpass);
+            $sqlStatements = file_get_contents("include/RvB_DB.sql");
+
+            dbRaw(trim($sqlStatements), $con);
+
+            $con = null;
+        }
     }
 } else {
     if (getAccessLevel() != 2) {
@@ -231,160 +263,168 @@ if (isset($_POST['data'])) {
     //This is a page request
     require('header.php');
     echo "<div id='backPane' onclick='hidePopup();'></div>";
-        ?>
+    ?>
     <div id="rtms">
         <input id="sendBroadcast" type="submit" value="Send">
         <input type="text" id="broadcastMessage" />
         <label for="broadcastMessage"">Broadcast Message</label>
     </div>
-        <div id="teammanagement" class="section">
-            <h2 class="sectionHeader">Team Management</h2>
+    <div id="teammanagement" class="section">
+        <h2 class="sectionHeader">Team Management</h2>
 
-            <div class="sectionContent">
-                <table class="adminTables">
-                    <tr>
-                        <td>Team Id</td>
-                        <td>Team Name</td>
-                        <td>Enabled</td>
-                        <td>Team Type</td>
-                        <td>Admin</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                    <?php
-                    $teams = getTeamList();
-
-                    foreach ($teams as $team) {
-                        echo "<tr>";
-                        echo "<td>" . $team['id'] . "</td>";
-                        echo "<td>" . $team['teamname'] . "</td>";
-                        echo "<td>" . ($team['enabled'] == 1 ? "Enabled" : "Disabled") . "</td>";
-                        if($team['isAdmin'] == 1){
-                            echo "<td>Admin</td>";
-                            echo "<td>True</td>";
-                        }else {
-                            echo "<td>" . ($team['type'] == 0 ? "Admin" : ($team['type'] == 1 ? "Red" : ($team['type'] == 2) ? "Blue" : ($team['type'] == 3 ? "Purple" : "NA"))) . "</td>";
-                            echo "<td>False</td>";
-                        }
-                        echo "<td><a href='javascript:void(0)' class='enableTeam tableButtons " . ($team['enabled'] == 1 ? "red" : "green") . "'>" . ($team['enabled'] == 1 ? "Disable" : "Enable") . " Team </a></td>";
-                        echo "<td><a href='javascript:void(0)' class='makeAdmin tableButtons " . ($team['isAdmin'] == 1 ? "red" : "green") . "'>" . ($team['isAdmin'] == 1 ? "Revoke Admin" : "Promote to Admin") . "</a></td>";
-                        echo "<td><a href='javascript:void(0)' class='deleteTeam tableButtons red'>Delete Team</a></td>";
-                        echo "<td><a href='javascript:void(0)' class='resetPassword tableButtons blue'>Reset Password</a></td>";
-                        echo "</tr>";
-                    }
-
-                    ?>
-                </table>
-            </div>
-        </div>
-
-        <div id="challengemanagement" class="section">
-            <h2 class="sectionHeader">Challenge Management</h2>
-
-            <div class="sectionContent">
-                <a href='javascript:void(0)' onclick="addChallenge()" id='addChallenge' class='modifyButton'>Add
-                    Challenge</a><br/><br/>
+        <div class="sectionContent">
+            <table class="adminTables">
+                <tr>
+                    <td>Team Id</td>
+                    <td>Team Name</td>
+                    <td>Enabled</td>
+                    <td>Team Type</td>
+                    <td>Admin</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
                 <?php
-                $challenges = getChallengeList();
-                foreach ($challenges as $challenge) {
-                    echo $challenge->printChallenge();
-                }
-                ?>
-            </div>
-        </div>
+                $teams = getTeamList();
 
-        <div id="gamesetup" class="section">
-            <h2 class="sectionHeader">Game Setup</h2>
-
-            <div class="sectionContent">
-
-                <div id="gsTimeManagement">
-                    <h3>Time Management</h3><br/>
-                    <label for="startTime">Start Time:</label>
-                    <input class='configInput' type="text" id="startTime" value="<?php echo "$CONFIG->startDate"; ?>"/><br/>
-                    <label for="duration">Duration (hrs):</label>
-                    <input class='configInput' type="text" id="duration" value="<?php echo "$CONFIG->duration"; ?>"/><br/>
-                </div>
-                <hr/>
-                <div id="gsMotd">
-                    <h3>Message Configuration</h3>
-                    <br />
-					<label for="motd_edit">Message of the day:</label>
-					<textarea id="motd_edit"><?php echo "$CONFIG->motd"; ?></textarea><br/>
-                    <label for="rules">Rules:</label>
-                    <textarea id="rules"><?php echo "$CONFIG->rules"; ?></textarea><br/>
-                </div>
-                <hr/>
-                <div id="gsHeaderConfig">
-                    <h3>Header Configuration</h3>
-
-                    <br/>
-                    <label for="leftHeaderSet">Left Word:</label>
-                    <input class='configInput' type="text" id="leftHeaderSet" value="<?php echo explode('<><>', $CONFIG->leftHeader)[0]; ?>"/>
-                    <label for="leftHeaderStyle">Style:</label>
-                    <textarea id="leftHeaderStyle"><?php echo explode('<><>', $CONFIG->leftHeader)[1]; ?></textarea><br/>
-                    <hr class="smallHr" />
-                    <label for="centerHeaderSet">Center Word:</label>
-                    <input class='configInput' type="text" id="centerHeaderSet" value="<?php echo explode('<><>', $CONFIG->centerHeader)[0]; ?>"/>
-                    <label for="centerHeaderStyle">Style:</label>
-                    <textarea id="centerHeaderStyle"><?php echo explode('<><>', $CONFIG->centerHeader)[1]; ?></textarea><br/>
-                    <hr class="smallHr" />
-                    <label for="rightHeaderSet">Right Word:</label>
-                    <input class='configInput' type="text" id="rightHeaderSet" value="<?php echo explode('<><>', $CONFIG->rightHeader)[0]; ?>"/>
-                    <label for="rightHeaderStyle">Style:</label>
-                    <textarea id="rightHeaderStyle"><?php echo explode('<><>', $CONFIG->rightHeader)[1]; ?></textarea><br/>
-
-
-                    <a href='javascript:resetStyles();' class='red'>Reset Styles</a>
-                    <a href='javascript:updateGameRules();' class='green'>Update Rules</a>
-                </div>
-            </div>
-        </div>
-        <div id="containerManagement" class="section">
-            <h2 class="sectionHeader">Container Management</h2>
-
-            <div class="sectionContent">
-                <h4>The following functions are intended to be used as a last resort and may cause the database to
-                    reference containers that no longer exist</h4>
-                <table class="adminTables">
-                    <tr>
-                        <td>Name</td>
-                        <td>State</td>
-                        <td>IP</td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                    </tr>
-                    <?php
-                    $res = array();
-                    exec("sudo lxc-ls --fancy", $res);
-                    foreach (array_slice($res, 2) as $container) {
-                        if (preg_match("/-Base/", $container) == 1) {
-                            continue;
-                        }
-                        //Remove double spaces
-                        $container = preg_replace('/\s+/', ' ', $container);
-                        //Split on space character
-                        $row = explode(' ', $container);
-                        //Print table of container states
-                        echo "<tr>";
-                        echo "<td class='containerName'>" . $row['0'] . "</td>";
-                        echo "<td>" . $row['1'] . "</td>";
-                        echo "<td>" . $row['2'] . "</td>";
-                        echo "<td><a href='javascript:void(0)' class='green startContainer'>Start Container</a></td>";
-                        echo "<td><a href='javascript:void(0)' class='red stopContainer'>Stop Container</a></td>";
-                        echo "<td><a href='javascript:void(0)' class='red deleteContainer'>Delete Container</a></td>";
-                        echo "<td><a href='javascript:void(0)' class='blue regenFlag'>Regenerate Flag</a></td>";
-                        echo "</tr>";
+                foreach ($teams as $team) {
+                    echo "<tr>";
+                    echo "<td>" . $team['id'] . "</td>";
+                    echo "<td>" . $team['teamname'] . "</td>";
+                    echo "<td>" . ($team['enabled'] == 1 ? "Enabled" : "Disabled") . "</td>";
+                    if($team['isAdmin'] == 1){
+                        echo "<td>Admin</td>";
+                        echo "<td>True</td>";
+                    }else {
+                        echo "<td>" . ($team['type'] == 0 ? "Admin" : ($team['type'] == 1 ? "Red" : ($team['type'] == 2) ? "Blue" : ($team['type'] == 3 ? "Purple" : "NA"))) . "</td>";
+                        echo "<td>False</td>";
                     }
+                    echo "<td><a href='javascript:void(0)' class='enableTeam tableButtons " . ($team['enabled'] == 1 ? "red" : "green") . "'>" . ($team['enabled'] == 1 ? "Disable" : "Enable") . " Team </a></td>";
+                    echo "<td><a href='javascript:void(0)' class='makeAdmin tableButtons " . ($team['isAdmin'] == 1 ? "red" : "green") . "'>" . ($team['isAdmin'] == 1 ? "Revoke Admin" : "Promote to Admin") . "</a></td>";
+                    echo "<td><a href='javascript:void(0)' class='deleteTeam tableButtons red'>Delete Team</a></td>";
+                    echo "<td><a href='javascript:void(0)' class='resetPassword tableButtons blue'>Reset Password</a></td>";
+                    echo "</tr>";
+                }
 
-                    echo "</table>";
-                    ?>
+                ?>
+            </table>
+        </div>
+    </div>
+
+    <div id="challengemanagement" class="section">
+        <h2 class="sectionHeader">Challenge Management</h2>
+
+        <div class="sectionContent">
+            <a href='javascript:void(0)' onclick="addChallenge()" id='addChallenge' class='modifyButton'>Add
+                Challenge</a><br/><br/>
+            <?php
+            $challenges = getChallengeList();
+            foreach ($challenges as $challenge) {
+                echo $challenge->printChallenge();
+            }
+            ?>
+        </div>
+    </div>
+
+    <div id="gamesetup" class="section">
+        <h2 class="sectionHeader">Game Setup</h2>
+
+        <div class="sectionContent">
+
+            <div id="gsTimeManagement">
+                <h3>Time Management</h3><br/>
+                <label for="startTime">Start Time:</label>
+                <input class='configInput' type="text" id="startTime" value="<?php echo "$CONFIG->startDate"; ?>"/><br/>
+                <label for="duration">Duration (hrs):</label>
+                <input class='configInput' type="text" id="duration" value="<?php echo "$CONFIG->duration"; ?>"/><br/>
+            </div>
+            <hr/>
+            <div id="gsMotd">
+                <h3>Message Configuration</h3>
+                <br />
+                <label for="motd_edit">Message of the day:</label>
+                <textarea id="motd_edit"><?php echo "$CONFIG->motd"; ?></textarea><br/>
+                <label for="rules">Rules:</label>
+                <textarea id="rules"><?php echo "$CONFIG->rules"; ?></textarea><br/>
+            </div>
+            <hr/>
+            <div id="gsHeaderConfig">
+                <h3>Header Configuration</h3>
+
+                <br/>
+                <label for="leftHeaderSet">Left Word:</label>
+                <input class='configInput' type="text" id="leftHeaderSet" value="<?php echo explode('<><>', $CONFIG->leftHeader)[0]; ?>"/>
+                <label for="leftHeaderStyle">Style:</label>
+                <textarea id="leftHeaderStyle"><?php echo explode('<><>', $CONFIG->leftHeader)[1]; ?></textarea><br/>
+                <hr class="smallHr" />
+                <label for="centerHeaderSet">Center Word:</label>
+                <input class='configInput' type="text" id="centerHeaderSet" value="<?php echo explode('<><>', $CONFIG->centerHeader)[0]; ?>"/>
+                <label for="centerHeaderStyle">Style:</label>
+                <textarea id="centerHeaderStyle"><?php echo explode('<><>', $CONFIG->centerHeader)[1]; ?></textarea><br/>
+                <hr class="smallHr" />
+                <label for="rightHeaderSet">Right Word:</label>
+                <input class='configInput' type="text" id="rightHeaderSet" value="<?php echo explode('<><>', $CONFIG->rightHeader)[0]; ?>"/>
+                <label for="rightHeaderStyle">Style:</label>
+                <textarea id="rightHeaderStyle"><?php echo explode('<><>', $CONFIG->rightHeader)[1]; ?></textarea><br/>
+
+
+                <a href='javascript:resetStyles();' class='red'>Reset Styles</a>
+                <a href='javascript:updateGameRules();' class='green'>Update Rules</a>
             </div>
         </div>
+    </div>
+    <div id="containerManagement" class="section">
+        <h2 class="sectionHeader">Container Management</h2>
+
+        <div class="sectionContent">
+            <h4>The following functions are intended to be used as a last resort and may cause the database to
+                reference containers that no longer exist</h4>
+            <table class="adminTables">
+                <tr>
+                    <td>Name</td>
+                    <td>State</td>
+                    <td>IP</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <?php
+                $res = array();
+                exec("sudo lxc-ls --fancy", $res);
+                foreach (array_slice($res, 2) as $container) {
+                    if (preg_match("/-Base/", $container) == 1) {
+                        continue;
+                    }
+                    //Remove double spaces
+                    $container = preg_replace('/\s+/', ' ', $container);
+                    //Split on space character
+                    $row = explode(' ', $container);
+                    //Print table of container states
+                    echo "<tr>";
+                    echo "<td class='containerName'>" . $row['0'] . "</td>";
+                    echo "<td>" . $row['1'] . "</td>";
+                    echo "<td>" . $row['2'] . "</td>";
+                    echo "<td><a href='javascript:void(0)' class='green startContainer'>Start Container</a></td>";
+                    echo "<td><a href='javascript:void(0)' class='red stopContainer'>Stop Container</a></td>";
+                    echo "<td><a href='javascript:void(0)' class='red deleteContainer'>Delete Container</a></td>";
+                    echo "<td><a href='javascript:void(0)' class='blue regenFlag'>Regenerate Flag</a></td>";
+                    echo "</tr>";
+                }
+
+                echo "</table>";
+                ?>
+        </div>
+    </div>
+    <div id="dangerZone" class="section sectionRed">
+        <h2 class="sectionHeader">Danger Zone</h2>
+        <div class="sectionContent">
+            <a href='javascript:nukeTeams()' class='red'>Remove all teams</a> - Purge all teams, flag attempts, flags and challenge instances from the database and delete all team containers.
+            <a href='javascript:apocalypse()' class='red'>Apocalypse Mode</a> - Drops the RvB database and re-imports a new copy. Deletes all non base containers(user created base containers will be saved)
+
+        </div>
+    </div>
     <?php
 
     require('footer.php');

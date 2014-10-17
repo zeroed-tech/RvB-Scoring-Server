@@ -228,7 +228,6 @@ class BackgroundProcess{
     }
 
     public function run($outputFile = '/dev/null'){
-        error_log($outputFile);
         $this->outputFile = $outputFile;
         if (!file_exists(dirname($outputFile))) {
             mkdir(dirname($outputFile), 0777, true);

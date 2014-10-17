@@ -58,7 +58,6 @@ function deleteContainer($containerName, $challengeInstance=null){
     exec('sudo ssh-keygen -f "/root/.ssh/known_hosts" -R '.$containerName);
 
     if($challengeInstance!=null) {
-        error_log("Purging DB");
         //Delete container instance from the database
         dbDelete("challenge_instance", array("id" => $challengeInstance['id']));
 

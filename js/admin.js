@@ -134,6 +134,10 @@ function addChallenge(addChallenge) {
 				<select name="baseImage" id="baseImage"> \
 				</select> \
 			</label> \
+			<label>\
+			    <span></span>\
+                <input type="checkbox" id="symlink" value="true">Symbolic link new container to base</input> \
+            </label>\
 			<div id="progressbarouter"><div id="progressbarinner"></div><div id="progresstext">0%</div></div> \
 			<input type="submit" value="Add Challenge"> \
 		</form> \
@@ -153,7 +157,7 @@ function addChallenge(addChallenge) {
     $('#challengeUploadForm').submit(function (event) {
         event.preventDefault();
 
-        var data = {functionCall: 'addChallenge',challengeName: $('#challengeName').val(),challengeAuthor: $('#challengeAuthor').val(),scoreValue: $('#scoreValue').val(),baseImage: $('#baseImage').val()};
+        var data = {functionCall: 'addChallenge',challengeName: $('#challengeName').val(),challengeAuthor: $('#challengeAuthor').val(),scoreValue: $('#scoreValue').val(),baseImage: $('#baseImage').val(), symlink: $("#symlink").is(':checked')};
 
         var options = {
             beforeSubmit: preSubmit,
@@ -381,7 +385,7 @@ $(document).ready(function () {
                 var output = results.consoleOutput;
                 $('#backPane').html(' \
                 <div class="pane" onclick="event.stopPropagation();"> \
-                    <p>'+output+'</p> \
+                    <p id="consoleOutput">'+output+'</p> \
                 </div>');
                 showPane();
             }
@@ -498,12 +502,34 @@ function postSubmit(responseText, status) {
 }
 
 
+/****************************
+ *                          *
+ * THE DANGER ZONE FUNCTIONS*
+ *                          *
+ ****************************/
 
+function nukeTeams() {
+    if (confirm("You saw the message, you know what this will do.\n\nAre you sure you wish to continue?")) {
+        var data = {functionCall: 'nukeTeams'};
 
+        postData("admin.php", "data=" + JSON.stringify(data), function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var results = JSON.parse(xmlhttp.responseText);
+                showMessage(results.message, results.result, true);
+            }
+        });
+    }
+}
 
+function apocalypse(){
+    if (confirm("If the name didn't give it away, this will obliterate the game environment and set it up like a fresh install. Any manually defined containers (i.e. Something-Base) will be preserved.\n\nAre you sure you wish to continue?")) {
+        var data = {functionCall: 'apocalypse'};
 
-
-
-
-
-
+        postData("admin.php", "data=" + JSON.stringify(data), function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var results = JSON.parse(xmlhttp.responseText);
+                showMessage(results.message, results.result, true);
+            }
+        });
+    }
+}
