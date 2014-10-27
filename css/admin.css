@@ -31,15 +31,6 @@
 	float: right;
 }
 
-.pane ul{
-	margin-left: 10px;
-	list-style-type: none;
-}
-
-.pane ul li{
-	height: 30px;
-}
-
 #rtms{
     width: 100%;
     height: 45px;
@@ -103,4 +94,23 @@
 .sectionRed .sectionContent{
     background-color: white;
     margin: 0;
+}
+
+.dz{
+    width: 115px;
+}
+
+#times{
+    width: 100%;
+    height: 65px;
+}
+
+#stime{
+    float: left;
+    display: inline-block;
+}
+
+#ctime{
+    float: right;
+    display: inline-block;
 }

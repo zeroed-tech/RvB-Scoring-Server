@@ -39,17 +39,9 @@ class Challenge{
         }
 
         if($teamId!=null) {
-            $results = array();
-            exec('sudo lxc-ls --fancy -F name,ipv4 "^(Team' . $teamId . '-)+'.$challengeName.'(-Base)*$"', $results);
-            if(count($results) != 3){
-                error_log("Wrong number of results:");
-                foreach ($results as $result) {
-                    error_log($result);
-                }
-            }else{
-                $result = $results[2];
-                $this->ip = explode(' ',preg_replace('/\s+/', ' ', $result))[1];
-
+            $ip = getContainerIp("^(Team$teamId-)+".preg_replace("/[^A-Za-z0-9]/", '', $challengeName)."(-Base)*$");
+            if($ip != null){
+                $this->ip = $ip;
             }
         }
 	}
@@ -66,7 +58,9 @@ class Challenge{
 		$html .= "<span id='a'>";
 		$html .= "<h4>".substr($this->challengeName, 0, 70)."</h4>";
 		$html .= "</span>";
+        $html .= "<div class='achievementImage'>";
 		$html .= "<img src='data:image/jpeg;base64,".$this->challengeImage."' ></img>";
+        $html .= "</div>";
 		$html .= "<ul>";
 		$html .= "<li class='author'>Author: ".$this->challengeAuthor."</li>";
         $html .= "<li class='points'>Points: ".$this->points."</li>";
@@ -91,7 +85,9 @@ class Challenge{
         $html .= "<span>";
         $html .= "<h4>".substr($this->challengeName, 0, 50).(strlen($this->challengeName) > 50 ? "...":"")."</h4>";
         $html .= "</span>";
+        $html .= "<div class='achievementImage'>";
         $html .= "<img src='data:image/jpeg;base64,".$this->challengeImage."' ></img>";
+        $html .= "</div>";
         $html .= "<ul>";
         $html .= "<li class='author'>Author: ".$this->challengeAuthor."</li>";
         $html .= "<li class='username'>Username: ".$this->username."</li>";
@@ -140,8 +136,8 @@ class Achievement{
         $html .= "<div class='achievementDetails'>";
         $solved = explode(" ",$this->dateTimeSolved);
         $solvedString = $solved[1]." ";
-        $solvedDate = explode("-", $solved[0]);
-        $solvedString .= $solvedDate[2]."/".$solvedDate[1];
+        //$solvedDate = explode("-", $solved[0]);
+        //$solvedString .= $solvedDate[2]."/".$solvedDate[1];
         $html .= "<h2>".$this->challengeTitle."</h2><br />";
         $html .= "<p>Solved: ".$solvedString."</p>";
         $html .= "<p>Victim: ".$this->targetName."</p>";
@@ -182,7 +178,13 @@ class Config{
         $now = new DateTime();
         $gameStart = new DateTime($this->startDate);
         $gameEnd = new DateTime($this->startDate);
-        $gameEnd->add(new DateInterval('PT'.$this->duration.'H'));
+        $timeComponents = explode('.', $this->duration);
+        $timeString = "PT";
+        $timeString .= $timeComponents[0].'H';
+        if(isset($timeComponents[1])){
+            $timeString .= ($timeComponents[1]*6).'M';
+        }
+        $gameEnd->add(new DateInterval($timeString));
         if($now < $gameStart){
             return Config::NOTSTARTED;
         }
@@ -217,7 +219,7 @@ class BackgroundProcess{
     private $pid;
     private $outputFile;
     private $lastLine = 0;
-    private $filters = array("/^.*\(ECDSA\).*$/", "/^.*Pseudo-terminal.*$/", "/^.*Enter new UNIX password.*$/");
+    private $filters = array("/^.*ECDSA.*$/", "/^.*Pseudo-terminal.*$/", "/^.*Enter new UNIX password.*$/", "/^Done.\s/", "/^Adding user.*Team\d.*to group.*sudo.*$/");
     private $callback;
     private $callbackArgs;
 
@@ -270,10 +272,11 @@ class BackgroundProcess{
                 $match = false;
                 foreach($this->filters as $filter){
                     if(preg_match($filter, $fContents[$this->lastLine]) == 1){
-                        if(strlen(trim($fContents[$this->lastLine]) > 0)) {
-                            $match = true;
-                        }
+                        $match = true;
                     }
+                }
+                if(strlen(trim($fContents[$this->lastLine])) <= 1){
+                    $match = true;
                 }
                 if(!$match) {
                     $res[] = $fContents[$this->lastLine];

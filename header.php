@@ -39,7 +39,8 @@
 			<a href="index.php">Home</a>
 			<a href="javascript:void(0)" onclick="scoreboard();">Scoreboard</a>
 			<a href="javascript:void(0)" onclick="rules();">Rules</a>
-			<?php 
+			<?php
+            $teamType = -1;
 			switch (getAccessLevel()) {
 				case 0:
 					echo "<a href='javascript:void(0)' onclick='login();'>Login</a>";
@@ -47,8 +48,11 @@
 					break;
 				case 1:
                     $teamType = getTeamType();
+                    if($teamType == null){
+                        session_destroy();
+                    }
                     if($teamType == 2 || $teamType == 3) {//Blue or Purple team
-                        echo "<a href='manage.php'>Management</a>";
+                        echo "<a href='manage.php#hostManagement'>Management</a>";
                     }
 					if($teamType == 1 || $teamType == 3) {//Red or Purple team
                         echo "<a href='achievements.php'>Achievements</a>";
@@ -58,22 +62,34 @@
                     echo "<a href='javascript:void(0)' onclick='logout();'>Logout</a>";
                     echo "<a href='javascript:void(0)' onclick='void(0);'></a>";
 
-                    if($teamType == 1 || $teamType == 3) {//Red or Purple team
-                        $team = dbRaw("SELECT t.id as tid, t.teamname, SUM(DISTINCT(ct.value)) as currentScore FROM teams AS t INNER JOIN attempts AS a ON t.id=a.teamid AND a.correct=1 INNER JOIN flag AS f ON a.flagSubmitted = f.flag INNER JOIN challenge_instance AS c ON c.flagId = f.id INNER  JOIN challenge_templates AS ct ON ct.id = c.parentId WHERE t.id=" . $_SESSION['teamid'] . " GROUP BY t.id ORDER BY currentScore DESC");
-                        if (count($team) == 0) {
-                            $team[0]['teamname'] = "";
-                            $team[0]['currentScore'] = "";
-                        }
 
-                        echo "<a href='javascript:void(0)' onclick='void(0);'>" . $team[0]['teamname'] . "      " . $team[0]['currentScore'] . "</a>";
-                    }
 					break;
 				case 2:
 					echo "<a href='javascript:void(0)' onclick='logout();'>Logout</a>";
 					echo "<a href='admin.php'>Admin</a>";
 					break;
 			}
-			?>
-			<span id="ranking"></span><!-- Placeholder for score/position (updated via jquere/ajax every minute or so) -->
-            <hr />
+            echo "<hr />";
+            /*
+            $gameState = $CONFIG->getGameState();
+            if($gameState == Config::RUNNING){
+                    echo "<h4 class='debug'>RUNNING   ".date('Y-m-d H:i:s')."</h4>";
+            }elseif($gameState == Config::NOTSTARTED){
+                echo "<h4 class='debug'>NOT STARTED   ".date('Y-m-d H:i:s')."</h4>";
+            }elseif($gameState == Config::FINISHED){
+                echo "<h4 class='debug'>FINISHED   ".date('Y-m-d H:i:s')."</h4>";
+            }*/
+            if($teamType == 1 || $teamType == 3) {//Red or Purple team
+                $team = dbRaw("SELECT t.id as tid, t.teamname, SUM(DISTINCT(ct.value)) as currentScore FROM teams AS t INNER JOIN attempts AS a ON t.id=a.teamid AND a.correct=1 INNER JOIN flag AS f ON a.flagSubmitted = f.flag INNER JOIN challenge_instance AS c ON c.flagId = f.id INNER  JOIN challenge_templates AS ct ON ct.id = c.parentId WHERE t.id=" . $_SESSION['teamid'] . " GROUP BY t.id ORDER BY currentScore DESC");
+                if (count($team) == 0) {
+                    $team[0]['teamname'] = "";
+                    $team[0]['currentScore'] = "";
+                }
+
+                echo "<a href='javascript:void(0)' class='score' onclick='void(0);'>" . $team[0]['teamname'] . "      " . $team[0]['currentScore'] . "</a>";
+                echo "<br />";
+            }
+
+            ?>
+
 		</div>

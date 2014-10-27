@@ -47,6 +47,7 @@ Font from http://www.zone38.net/font/
 */
 #scoreTable th{
     font-weight: bold;
+    border-bottom: medium solid;
 }
 
 #scoreTable{
@@ -155,7 +156,7 @@ Font from http://www.zone38.net/font/
     margin-top: 10px;
     font-weight: bold;
 }
-input[type="text"], input[type="password"], textarea, select, input[type="file"] {
+input[type="text"], input[type="password"], textarea, select, input[type="file"], input[type="number"] {
     border: none;
     color: #525252;
     height: 25px;
@@ -232,11 +233,16 @@ a{
 a, a:link, a:visited, a:active{
     color: #38c;
     text-decoration: none;
+
 }
 
 a:hover{
     color: #789;
     text-decoration: underline;
+}
+
+.score{
+    float: right;
 }
 
 .outer  {
@@ -540,8 +546,17 @@ a:hover{
     transform: translateY(-50%);
 }
 
-.challenge img{
+.achievementImage{
     min-height: 128px;
+    max-height: 128px;
+    vertical-align: middle;
+
+}
+
+.challenge img{
+
+    vertical-align: middle;
+    max-width: 128px;
 }
 
 .challenge ul{
@@ -549,6 +564,15 @@ a:hover{
     list-style-type: none;
     padding-left:20px;
     margin: 0px;
+}
+
+.pane ul{
+    margin-left: 10px;
+    list-style-type: none;
+}
+
+.pane ul li{
+    height: 30px;
 }
 
 .section{
@@ -601,7 +625,7 @@ a:hover{
 }
 
 .achievementDetails{
-    position: relative;
+    position: absolute;
     display: inline-block;
     margin-bottom: 10px;
 }
@@ -611,6 +635,10 @@ a:hover{
     display: inline;
 }
 
+#currentDate{
+    color: #030303;
+}
+
 canvas{
     margin: auto;
     position: relative;
@@ -618,4 +646,8 @@ canvas{
     top: calc(50% - 250px);
     left: -webkit-calc(50% - 300px);
     left: calc(50% - 300px);
+}
+
+.debug{
+    color: white;
 }

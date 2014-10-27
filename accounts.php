@@ -36,7 +36,7 @@
 					$adminCheck = dbSelect("admins",array(),array('id'=>$_SESSION['teamid']), false);
 					//If a non empty result set was returned then the user ID was found in the admins table
 					$_SESSION['isAdmin'] = (!empty($adminCheck)) ? true:false;
-					echo json_encode(array('result'=>true, 'message'=>'You are not logged in'));
+					echo json_encode(array('result'=>true, 'message'=>'You are now logged in'));
 				}
 				exit();
 			}
@@ -51,7 +51,7 @@
 					exit();
 				}
 
-				if(dbInsert("teams", array("teamname"=>$data->teamName,"password"=>md5($data->teamPassword)))){
+				if(dbInsert("teams", array("teamname"=>htmlspecialchars($data->teamName),"password"=>md5($data->teamPassword)))){
 					//$_SESSION['teamid'] = dbSelect("teams", array("id"), array("teamname"=>$data->teamName), false)[0]['id'];
 					echo json_encode(array('result'=>true, 'message'=>'You are now registered but your account is disabled. Please ask the admin to enable your account'));
 					exit();

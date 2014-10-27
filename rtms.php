@@ -9,6 +9,9 @@ require('include/config.inc.php');
 header("Content-Type: text/event-stream\n\n");
 
 function pushStatusUpdate($type, $message, $messageId=-1){
+    if(strlen(trim($message)) <= 1){
+        return;
+    }
     $data = array();
     $data['type'] = $type;
     $data['id'] = $messageId;
@@ -34,32 +37,38 @@ if(!isset($_SESSION['lastRTMSId'])){
 
 //Check to see if this user has any background processes running
 if(isset($_SESSION['BGProcess'])){
-    //Background process found
-    $bg = unserialize($_SESSION['BGProcess']);
-    if($bg != null){
-        //Get a list of new messages to display
-        $messages = $bg->getNewOutput();
-        //Sent all new messages as a notification
-        foreach($messages as $message){
-            pushStatusUpdate("message", $message);
-        }
-
-        //If the background process is finished then unset the session
-        if(!$bg->isRunning()){
-            unset($_SESSION['BGProcess']);
-            //Check to see if this background process had a callback function
-            $callback = $bg->getCallback();
-            $callbackArgs = $bg->getCallbackArgs();
-            if($callback != null){
-                //Found a callback function, so call it
-                pushStatusUpdate("message", call_user_func_array($callback, $callbackArgs));
+    if(is_array($_SESSION['BGProcess'])){
+        if(count($_SESSION['BGProcess']) > 0) {
+            for ($i = 0; $i < count($_SESSION['BGProcess']); $i++) {
+                //Background process found
+                $bg = unserialize($_SESSION['BGProcess'][$i]);
+                if ($bg != null) {
+                    //Get a list of new messages to display
+                    $messages = $bg->getNewOutput();
+                    //Sent all new messages as a notification
+                    foreach ($messages as $message) {
+                        pushStatusUpdate("message", $message);
+                    }
+                    //If the background process is finished then unset the session
+                    if (!$bg->isRunning()) {
+                        unset($_SESSION['BGProcess'][$i]);
+                        //Check to see if this background process had a callback function
+                        $callback = $bg->getCallback();
+                        $callbackArgs = $bg->getCallbackArgs();
+                        if ($callback != null) {
+                            //Found a callback function, so call it
+                            pushStatusUpdate("message", call_user_func_array($callback, $callbackArgs));
+                        }
+                    } else {
+                        //Store the new version of the class in the session variable
+                        $_SESSION['BGProcess'][$i] = serialize($bg);
+                    }
+                } else {
+                    unset($_SESSION['BGProcess'][$i]);
+                }
             }
-        }else {
-            //Store the new version of the class in the session variable
-            $_SESSION['BGProcess'] = serialize($bg);
+            $_SESSION['BGProcess'] = array_values($_SESSION['BGProcess']);//Remove all the unset array values
         }
-    }else{
-        unset($_SESSION['BGProcess']);
     }
 }
 

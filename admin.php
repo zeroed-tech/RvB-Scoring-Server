@@ -26,11 +26,8 @@ function getContainers($filter, $inverse=false)
 }
 
 function sendBroadcast($message, $type="message"){
-    dbInsert("rtmsMessageQueue", array("message"=>$message,"type"=>$type, "timeAdded"=>time()));
+    dbInsert("rtmsMessageQueue", array("message"=>$message,"type"=>$type));
 }
-
-
-
 
 //Check to see if this is a post query or page request
 if (isset($_POST['data'])) {
@@ -116,6 +113,14 @@ if (isset($_POST['data'])) {
                     case 'application/x-tar':
                     case 'application/zip':
                     case 'application/x-bzip2':
+                    case 'application/x-gzip-compressed':
+                    case 'application/x-tar-compressed':
+                    case 'application/zip-compressed':
+                    case 'application/x-zip-compressed':
+                    case 'application/x-bzip2-compressed':
+                    case 'application/x-bzip':
+                    case 'application/x-compressed':
+                    case 'multipart/x-zip':
                     case 'application/octet-stream'://Used to detect rar files
                     case ''://HTTP file API doesn't appear to recognise 7zip files so we have to accept blank
                         break;
@@ -133,7 +138,7 @@ if (isset($_POST['data'])) {
                 //Change the current working directory to our random uploads dir
                 chdir($uploadDir);
                 //Extract the uploaded file
-                exec('extract ' . $fileName);
+                exec("extract '$fileName'");
                 //Delete the uploaded zip file
                 //unlink($fileName);
 
@@ -144,8 +149,13 @@ if (isset($_POST['data'])) {
                 $bp = new BackgroundProcess($command, "addContainerToDatabase", $callbackArgs);
                 $bp->run($uploadDir."rvbCreateContainerOutput");
 
+                //Make sure the session variable has been setup and set it up if it hasn't
+                if(!is_array($_SESSION['BGProcess'])){
+                    $_SESSION['BGProcess'] = array();
+                }
                 //Store the background process object in a session variable
-                $_SESSION['BGProcess'] = serialize($bp);
+                $_SESSION['BGProcess'][] = serialize($bp);
+
 
                 echo json_encode(array('result' => 'true', 'message' => 'Challenge added to background queue'));
             } else {
@@ -200,7 +210,11 @@ if (isset($_POST['data'])) {
         }
         case 'updateConfig': {
             //Update game config
-            $res = dbUpdate("config", array("startTime" => $data->startTime, "duration" => $data->duration, "motd" => $data->motd, "rules"=>$data->rules, "leftHeader" => $data->leftHeader, "centerHeader" => $data->centerHeader, "rightHeader" => $data->rightHeader), array("id" => 1));
+            $duration = $data->duration;
+            if(isset(explode('.',$data->duration)[1]) && explode('.',$data->duration)[1] > 9){
+                $duration = explode('.', $duration)[0]+1;
+            }
+            $res = dbUpdate("config", array("startTime" => $data->startTime, "duration" => $duration, "motd" => $data->motd, "rules"=>$data->rules, "leftHeader" => $data->leftHeader, "centerHeader" => $data->centerHeader, "rightHeader" => $data->rightHeader), array("id" => 1));
             echo json_encode(array('result' => ($res == null ? 'true' : 'false')));
             break;
         }
@@ -218,10 +232,11 @@ if (isset($_POST['data'])) {
             exec("sudo lxc-destroy -n " . escapeshellcmd($data->containerName));
             break;
         }
-        case 'regenFlag': {
-            setFlagForContainer($data->containerName);
+        /*case 'regenFlag': {
+            $flag = setFlagForContainer($data->containerName);
+            echo json_encode(array('result' => 'true', 'message' => 'Changed flag for '.$data->containerName.' to '.$flag));
             break;
-        }
+        }*/
         //DANGER ZONE FUNCTIONS
         case "nukeTeams":{
             dbTruncate("attempts");
@@ -233,10 +248,16 @@ if (isset($_POST['data'])) {
             foreach($toDelete as $delete){
                 deleteContainer($delete);
             }
+            echo json_encode(array('result' => 'true', 'message' => 'Teams wiped'));
             break;
         }
 
         case "apocalypse":{
+            //Delete all team containers before deleting the bases (otherwise deleting the base will fail)
+            $toDelete = getContainers("/^Team.*$/");
+            foreach($toDelete as $delete){
+                deleteContainer($delete);
+            }
             $toDelete = getContainers("/^.*-Base$/", true);
             foreach($toDelete as $delete){
                 deleteContainer($delete);
@@ -253,6 +274,12 @@ if (isset($_POST['data'])) {
             dbRaw(trim($sqlStatements), $con);
 
             $con = null;
+            echo json_encode(array('result' => 'true', 'message' => 'Challenge disabled'));
+            break;
+        }
+        case "poweroff":{
+            exec("sudo poweroff");
+            break;
         }
     }
 } else {
@@ -291,13 +318,29 @@ if (isset($_POST['data'])) {
                 foreach ($teams as $team) {
                     echo "<tr>";
                     echo "<td>" . $team['id'] . "</td>";
-                    echo "<td>" . $team['teamname'] . "</td>";
+                    echo "<td>" . substr(htmlspecialchars($team['teamname']), 0, 20) . "</td>";
                     echo "<td>" . ($team['enabled'] == 1 ? "Enabled" : "Disabled") . "</td>";
                     if($team['isAdmin'] == 1){
                         echo "<td>Admin</td>";
                         echo "<td>True</td>";
                     }else {
-                        echo "<td>" . ($team['type'] == 0 ? "Admin" : ($team['type'] == 1 ? "Red" : ($team['type'] == 2) ? "Blue" : ($team['type'] == 3 ? "Purple" : "NA"))) . "</td>";
+                        switch ($team['type']){
+                            case "0":
+                                echo "<td>Admin</td>";
+                                break;
+                            case "1":
+                                echo "<td>Red</td>";
+                                break;
+                            case "2":
+                                echo "<td>Blue</td>";
+                                break;
+                            case "3":
+                                echo "<td>Purple</td>";
+                                break;
+                            default:
+                                echo "<td>NA</td>";
+                                break;
+                        }
                         echo "<td>False</td>";
                     }
                     echo "<td><a href='javascript:void(0)' class='enableTeam tableButtons " . ($team['enabled'] == 1 ? "red" : "green") . "'>" . ($team['enabled'] == 1 ? "Disable" : "Enable") . " Team </a></td>";
@@ -335,7 +378,7 @@ if (isset($_POST['data'])) {
             <div id="gsTimeManagement">
                 <h3>Time Management</h3><br/>
                 <label for="startTime">Start Time:</label>
-                <input class='configInput' type="text" id="startTime" value="<?php echo "$CONFIG->startDate"; ?>"/><br/>
+                <input class='configInput' type="text" id="startTime" value="<?php echo "$CONFIG->startDate"; ?>"/><a href='javascript:void(0);' id="currentDate">Now</a><br/>
                 <label for="duration">Duration (hrs):</label>
                 <input class='configInput' type="text" id="duration" value="<?php echo "$CONFIG->duration"; ?>"/><br/>
             </div>
@@ -388,7 +431,7 @@ if (isset($_POST['data'])) {
                     <td></td>
                     <td></td>
                     <td></td>
-                    <td></td>
+
                 </tr>
                 <?php
                 $res = array();
@@ -409,7 +452,7 @@ if (isset($_POST['data'])) {
                     echo "<td><a href='javascript:void(0)' class='green startContainer'>Start Container</a></td>";
                     echo "<td><a href='javascript:void(0)' class='red stopContainer'>Stop Container</a></td>";
                     echo "<td><a href='javascript:void(0)' class='red deleteContainer'>Delete Container</a></td>";
-                    echo "<td><a href='javascript:void(0)' class='blue regenFlag'>Regenerate Flag</a></td>";
+                    //echo "<td><a href='javascript:void(0)' class='blue regenFlag'>Regenerate Flag</a></td>";
                     echo "</tr>";
                 }
 
@@ -420,13 +463,16 @@ if (isset($_POST['data'])) {
     <div id="dangerZone" class="section sectionRed">
         <h2 class="sectionHeader">Danger Zone</h2>
         <div class="sectionContent">
-            <a href='javascript:nukeTeams()' class='red'>Remove all teams</a> - Purge all teams, flag attempts, flags and challenge instances from the database and delete all team containers.
-            <a href='javascript:apocalypse()' class='red'>Apocalypse Mode</a> - Drops the RvB database and re-imports a new copy. Deletes all non base containers(user created base containers will be saved)
+            <a href='javascript:nukeTeams()' class='red dz'>Remove all teams</a> - Delete all teams, flag attempts and team containers<br />
+            <a href='javascript:apocalypse()' class='red dz'>Apocalypse Mode</a> - Reverts the database, deletes all non user base containers and all teams<br />
+            <a href='javascript:poweroff()' class='red dz'>Power off</a> - Turns off the server and all containers
 
         </div>
     </div>
     <?php
-
+    echo "<div id='times'>";
+    echo "<h4 id='stime' class='debug'>Server Time: ".date('H:i:s')."</h4><h4 class='debug' id='ctime'>Client Time: <span id='clientTime'></span></h4>";
+    echo "</div>";
     require('footer.php');
 }
 ?>

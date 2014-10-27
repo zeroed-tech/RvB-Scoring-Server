@@ -83,12 +83,12 @@ function draw(){
 
         if(a.class == "hours"){
             a.rot = ((difHours/12)*(Math.PI*2) - (Math.PI/2));// + ((difMins/3600)*(Math.PI*2));
-            if(difHours = 0)
+            if(difHours == 0)
                 a.rot = -1.5701;
         }
         else if(a.class == "mins"){
             a.rot = ((difMins/60)*(Math.PI*2) - (Math.PI/2));// + ((difSecs/3600)*(Math.PI*2));
-            if(difMins = 0)
+            if(difMins == 0)
                 a.rot = -1.5701;
         }
         else if(a.class == "secs"){

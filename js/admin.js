@@ -10,10 +10,10 @@
  target - The button clicked. Used to re-style the button after processing the click
  teamType - determines if this team should be Red, Blue or Purple
  */
-function enableTeam(teamId, enabling, target, $teamType) {
+function enableTeam(teamId, enabling, target, teamType) {
     var data = {functionCall:enabling ? "enable" : "disable", teamId: teamId};
     if(enabling){
-        data.teamType = $teamType;
+        data.teamType = teamType;
     }
     postData("admin.php", "data=" + JSON.stringify(data), function () {
         if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
@@ -29,6 +29,7 @@ function enableTeam(teamId, enabling, target, $teamType) {
                 target.addClass("red");
                 target.html("Disable Team");
                 target.parent().parent().children()[2].innerHTML = "Enabled";
+                target.parent().parent().children()[3].innerHTML = (teamType == 1 ? "Red":(teamType == 2 ? "Blue": (teamType == 3 ? "Purple":"NA")));
             }
         }
     });
@@ -123,7 +124,7 @@ function addChallenge(addChallenge) {
 			</label> \
 			<label> \
 				<span>Points Available:</span> \
-				<input id="scoreValue" type="text" placeholder="200" /><br /> \
+				<input id="scoreValue" type="number" min="1" placeholder="200" /><br /> \
 			</label> \
 			<label> \
 				<span>Challenge Files:</span> \
@@ -207,6 +208,11 @@ function resetStyles() {
  Setup listeners
  */
 $(document).ready(function () {
+    var currentdate = new Date();
+
+    var currentTime = ((currentdate.getHours() < 10) ? ("0" + currentdate.getHours()) : currentdate.getHours()) + ":" + ((currentdate.getMinutes() < 10) ? ("0" + currentdate.getMinutes()) : currentdate.getMinutes()) + ":" + ((currentdate.getSeconds() < 10) ? ("0" + currentdate.getSeconds()) : currentdate.getSeconds());
+
+    $("#clientTime").html(currentTime);
 
     $("#sendBroadcast").click(function(event){
         var data = {functionCall: "broadcastMessage", message: $("#broadcastMessage").val()};
@@ -334,7 +340,7 @@ $(document).ready(function () {
                             showMessage(results.message, results.result, false);
                             if (results.result) {
                                 clickedChallenge.find(".author").text("Author: " + data.challengeAuthor);
-
+                                clickedChallenge.find(".points").text("Points: " + data.scoreValue);
                                 hidePopup();
                             }
                         }
@@ -422,14 +428,44 @@ $(document).ready(function () {
         }
     });
 
+    $("#currentDate").click(function(event){
+        var today = new Date();
+        var dd = today.getDate();
+        var mm = today.getMonth()+1; //January is 0!
+        var yyyy = today.getFullYear();
+        var hour = today.getHours();
+        var mins = today.getMinutes();
+
+        if(dd<10) {
+            dd='0'+dd;
+        }
+
+        if(mm<10) {
+            mm='0'+mm;
+        }
+
+        if(mins<10) {
+            mins='0'+mins;
+        }
+
+
+        today = yyyy+"-"+mm+"-"+dd+" "+hour+":"+mins+":00";
+        $("#startTime").val(today);
+    });
+
+    /*
     $(".regenFlag").click(function (event) {
         var data = {functionCall: "regenFlag",containerName: $(this).parent().parent().children()[0].innerHTML};
         data.functionCall = 'regenFlag';
         data.containerName = $(this).parent().parent().children()[0].innerHTML;
         postData("admin.php", "data=" + JSON.stringify(data), function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var results = JSON.parse(xmlhttp.responseText);
+                showMessage(results.message, results.result, false);
+            }
         });
     });
-
+    */
 
 });
 
@@ -462,17 +498,25 @@ function preSubmit() {
         //Get the file size and type
         var fsize = $('#challengeFiles')[0].files[0].size;
         var ftype = $('#challengeFiles')[0].files[0].type;
-        //Check that the filetype is valid. Currently only tar and gzip tar are supported. More may be added later
+        //Check that the filetype is valid.
         switch (ftype) {
             case 'application/x-gzip':
             case 'application/x-tar':
             case 'application/zip':
             case 'application/x-bzip2':
+            case 'application/x-gzip-compressed':
+            case 'application/x-tar-compressed':
+            case 'application/zip-compressed':
+            case 'application/x-zip-compressed':
+            case 'application/x-bzip2-compressed':
+            case 'application/x-bzip':
+            case 'application/x-compressed':
+            case 'multipart/x-zip':
             case ''://http file API doesnt appear to recognise 7zip files so we have to accept blank
                 break;
             default:
                 console.log("File Type: " + ftype);
-                showMessage("<b>" + ftype + "</b> Unsupported file type! Please upload a tar or tar.gz file", false, false);
+                showMessage("<b>" + ftype + "</b> Unsupported file type! Supported file types: zip, tar, gzip, 7zip, rar, bzip", false, false);
                 return false
         }
     } else {
@@ -511,11 +555,10 @@ function postSubmit(responseText, status) {
 function nukeTeams() {
     if (confirm("You saw the message, you know what this will do.\n\nAre you sure you wish to continue?")) {
         var data = {functionCall: 'nukeTeams'};
-
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);
-                showMessage(results.message, results.result, true);
+                showMessage(results.message, results.result, false);
             }
         });
     }
@@ -525,6 +568,18 @@ function apocalypse(){
     if (confirm("If the name didn't give it away, this will obliterate the game environment and set it up like a fresh install. Any manually defined containers (i.e. Something-Base) will be preserved.\n\nAre you sure you wish to continue?")) {
         var data = {functionCall: 'apocalypse'};
 
+        postData("admin.php", "data=" + JSON.stringify(data), function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var results = JSON.parse(xmlhttp.responseText);
+                showMessage(results.message, results.result, false);
+            }
+        });
+    }
+}
+
+function poweroff(){
+    if (confirm("This will turn off the scoring server.\n\nAre you sure you wish to continue?")) {
+        var data = {functionCall: 'poweroff'};
         postData("admin.php", "data=" + JSON.stringify(data), function () {
             if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
                 var results = JSON.parse(xmlhttp.responseText);

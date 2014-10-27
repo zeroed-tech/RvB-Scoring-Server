@@ -38,7 +38,7 @@ function quote($toQuote){
  *
  * @return array An array of associative arrays  with column names as keys
  */
-function dbSelect($table, $values=array(), $where=array(), $inverseWhere){
+function dbSelect($table, $values=array(), $where=array(), $inverseWhere=false){
     global $con;
     try{
         $sql = "SELECT ";

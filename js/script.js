@@ -130,7 +130,6 @@ function rules(){
             var rules = JSON.parse(xmlhttp.responseText);
 
             for(var rule in rules){
-                console.log(rule)
                 $("#rulesList").append("<li>"+rules[rule].rule+"</li><li></li>")
             }
         }
@@ -143,7 +142,7 @@ function scoreboard(){
 	document.getElementById("backPane").innerHTML = ' \
 	<div class="pane" onclick="event.stopPropagation();"> \
 	<table id="scoreTable">\
-		<tr><th>Position</th><th>Team Name</th><th>Score</th></th>\
+		<tr><th>Position</th><th>Team Name</th><th>Score</th></tr>\
 	</table>\
 	</div>';
 	var data = new Object();
@@ -153,7 +152,7 @@ function scoreboard(){
 		if (xmlhttp.readyState==4 && xmlhttp.status==200){
 			var scores = JSON.parse(xmlhttp.responseText);
 			for(var score in scores){
-				$("#scoreTable").append("<tr class='"+(scores[score].currentTeam ? "myTeam":"someTeam")+"'><td>"+(parseInt(score))+"</td><td>"+scores[score].teamName+"</td><td>"+scores[score].currentScore+"</td></tr>")
+				$("#scoreTable").append("<tr class='"+(scores[score].currentTeam ? "myTeam":"someTeam")+"'><td>"+(parseInt(score)+1)+"</td><td>"+scores[score].teamName+"</td><td>"+scores[score].currentScore+"</td></tr>")
 			}
 
 		}

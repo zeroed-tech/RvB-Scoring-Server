@@ -2,7 +2,7 @@
 require('include/config.inc.php');
 if(isset($_POST['data'])){
 
-    $gameState = $CONFIG->getGameState();
+        $gameState = $CONFIG->getGameState();
 
         $data = json_decode($_POST['data']);
 
@@ -52,7 +52,7 @@ if(isset($_POST['data'])){
 
                                 //Only tell others that this flag was captured the first time
                                 if(count(dbSelect("attempts",array(),array("teamid"=>$_SESSION['teamid'], "flagSubmitted"=>$data->flag, "correct"=>1))) == 0) {
-                                    dbInsert("rtmsMessageQueue", array("message" => $flag['teamname'] . "'s flag for " . $flag['name'] . " was captured by " . $_SESSION['teamName'], "type" => "message", "timeAdded" => time()));
+                                    dbInsert("rtmsMessageQueue", array("message" => $flag['teamname'] . "'s flag for " . $flag['name'] . " was captured by " . $_SESSION['teamName'], "type" => "message"));
                                 }
                                 $flagCaptured = true;
                                 $flagMatch = true;
@@ -89,6 +89,7 @@ if(isset($_POST['data'])){
                 foreach ($scores as $score) {
                     $res[] = array('teamName' => substr(htmlspecialchars($score['teamname']), 0, 20), 'currentScore' => $score['currentScore'], 'currentTeam' => ($score['tid'] == $_SESSION['teamid'] ? true : false));
                 }
+
 
                 //Return the json encoded scores
                 echo json_encode($res);

@@ -15,6 +15,18 @@
 		return $accessLevel;
 	}
 
+    function getContainerIp($filter){
+        $results = array();
+        exec('sudo lxc-ls --fancy -F name,ipv4 "'.$filter.'"', $results);
+        if(count($results) != 3){
+
+        }else{
+            $result = $results[2];
+            return explode(' ',preg_replace('/\s+/', ' ', $result))[1];
+        }
+        return null;
+    }
+
 
     /*
      *
